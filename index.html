@@ -6,23 +6,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>checken的个人博客</title>
   <style>
-    body {
+    html, body {
       margin: 0;
+      padding: 0;
+      height: 100%;
       font-family: 'Arial', sans-serif;
       background: url('image/ZJU.jpg') no-repeat center center fixed;
       background-size: cover;
-      color: #333;
+      color: #fff;
     }
 
-    .overlay {
-      background-color: rgba(255, 255, 255, 0.9);
+    .content {
       min-height: 100vh;
       padding: 2rem;
-    }
-
-    .header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       text-align: center;
-      margin-bottom: 2rem;
     }
 
     .header h1 {
@@ -32,51 +33,74 @@
 
     .header p {
       font-size: 1.2rem;
-      color: #555;
+      max-width: 600px;
+      color: #f0f0f0;
     }
 
     .card-grid {
       display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-      padding: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 2rem;
     }
 
     .card {
-      background: skyblue;
+      background: rgba(135, 206, 235, 0.8);
       border-radius: 15px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-      padding: 2rem;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      padding: 1.5rem;
       transition: transform 0.3s ease, box-shadow 0.3s ease;
       cursor: pointer;
       text-align: center;
-      width: 100%;
+      min-width: 200px;
+      max-width: 300px;
+      flex: 1 1 40%;
     }
 
     .card:hover {
       transform: translateY(-10px);
-      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
     }
 
     .card a {
       text-decoration: none;
-      color: inherit;
+      color: #000;
       font-weight: bold;
-      font-size: 1.5rem;
-      display: block;
+      font-size: 1.2rem;
     }
 
     .footer {
-      text-align: center;
       margin-top: 3rem;
       font-size: 0.9rem;
-      color: #666;
+      color: #eee;
+    }
+
+    /* 手机适配 */
+    @media (max-width: 600px) {
+      .card-grid {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .card {
+        width: 90%;
+      }
+
+      .header h1 {
+        font-size: 2rem;
+      }
+
+      .header p {
+        font-size: 1rem;
+        padding: 0 1rem;
+      }
     }
   </style>
 </head>
 
 <body>
-  <div class="overlay">
+  <div class="content">
     <div class="header">
       <h1>checken</h1>
       <p>你将与许多灿若星辰的名字一起，共享浙大人这个光荣的称号，承担起服务民族复兴，促进人类社会进步的责任</p>
@@ -96,7 +120,7 @@
   </div>
 
   <script>
-    // 简单的访客计数示例（本地存储模拟）
+    // 本地访客计数（仅限当前设备）
     const visitorKey = 'checken_blog_visitor_count';
     let count = localStorage.getItem(visitorKey);
     if (!count) {
