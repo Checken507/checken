@@ -6,121 +6,112 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>checken的个人博客</title>
   <style>
-    html, body {
+    body {
       margin: 0;
-      padding: 0;
-      height: 100%;
       font-family: 'Arial', sans-serif;
       background: url('image/ZJU.jpg') no-repeat center center fixed;
       background-size: cover;
-      color: #fff;
-    }
-
-    .content {
+      color: #333;
       min-height: 100vh;
-      padding: 2rem;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
+    }
+
+    .header {
       text-align: center;
+      margin: 2rem 1rem;
+      padding: 1rem;
+      background-color: rgba(255, 255, 255, 0.7);
+      border-radius: 15px;
+      backdrop-filter: blur(5px);
     }
 
     .header h1 {
       margin: 0;
-      font-size: 2.5rem;
+      font-size: clamp(1.8rem, 5vw, 2.5rem);
     }
 
     .header p {
-      font-size: 1.2rem;
-      max-width: 600px;
-      color: #f0f0f0;
+      font-size: clamp(1rem, 3vw, 1.2rem);
+      color: #555;
+      margin: 0.5rem 0 0;
     }
 
     .card-grid {
       display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 1rem;
-      margin-top: 2rem;
+      flex-direction: column;
+      gap: 1.5rem;
+      padding: 1rem;
+      flex: 1;
     }
 
     .card {
-      background: rgba(135, 206, 235, 0.8);
+      background: rgba(135, 206, 235, 0.8); /* skyblue with transparency */
       border-radius: 15px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
       padding: 1.5rem;
       transition: transform 0.3s ease, box-shadow 0.3s ease;
       cursor: pointer;
       text-align: center;
-      min-width: 200px;
-      max-width: 300px;
-      flex: 1 1 40%;
+      width: 100%;
+      backdrop-filter: blur(3px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
     }
 
     .card:hover {
-      transform: translateY(-10px);
-      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+      transform: translateY(-5px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
     }
 
     .card a {
       text-decoration: none;
-      color: #000;
+      color: inherit;
       font-weight: bold;
-      font-size: 1.2rem;
+      font-size: clamp(1.2rem, 4vw, 1.5rem);
+      display: block;
     }
 
     .footer {
-      margin-top: 3rem;
+      text-align: center;
+      margin: 2rem 1rem;
       font-size: 0.9rem;
-      color: #eee;
+      color: white;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+      padding: 0.5rem;
     }
 
-    /* 手机适配 */
     @media (max-width: 600px) {
-      .card-grid {
-        flex-direction: column;
-        align-items: center;
-      }
-
       .card {
-        width: 90%;
+        padding: 1rem;
       }
-
-      .header h1 {
-        font-size: 2rem;
-      }
-
-      .header p {
-        font-size: 1rem;
-        padding: 0 1rem;
+      .header {
+        margin: 1rem 0.5rem;
+        padding: 0.8rem;
       }
     }
   </style>
 </head>
 
 <body>
-  <div class="content">
-    <div class="header">
-      <h1>checken</h1>
-      <p>你将与许多灿若星辰的名字一起，共享浙大人这个光荣的称号，承担起服务民族复兴，促进人类社会进步的责任</p>
-    </div>
+  <div class="header">
+    <h1>checken</h1>
+    <p>你将与许多灿若星辰的名字一起，共享浙大人这个光荣的称号，承担起服务民族复兴，促进人类社会进步的责任</p>
+  </div>
 
-    <div class="card-grid">
-      <div class="card"><a href="pages/calculus.html">微积分</a></div>
-      <div class="card"><a href="pages/linear_algebra.html">线性代数</a></div>
-      <div class="card"><a href="pages/ai_foundation.html">人工智能基础（A）</a></div>
-      <div class="card"><a href="pages/mechanics.html">力学</a></div>
-      <div class="card"><a href="pages/cs_notes.html">CS自学碎碎念</a></div>
-    </div>
+  <div class="card-grid">
+    <div class="card"><a href="pages/calculus.html">微积分</a></div>
+    <div class="card"><a href="pages/linear_algebra.html">线性代数</a></div>
+    <div class="card"><a href="pages/ai_foundation.html">人工智能基础（A）</a></div>
+    <div class="card"><a href="pages/mechanics.html">力学</a></div>
+    <div class="card"><a href="pages/cs_notes.html">CS自学碎碎念</a></div>
+  </div>
 
-    <div class="footer">
-      你是第 <span id="visitor-count">...</span> 位访客
-    </div>
+  <div class="footer">
+    你是第 <span id="visitor-count">...</span> 位访客
   </div>
 
   <script>
-    // 本地访客计数（仅限当前设备）
+    // 简单的访客计数示例（本地存储模拟）
     const visitorKey = 'checken_blog_visitor_count';
     let count = localStorage.getItem(visitorKey);
     if (!count) {
