@@ -3,322 +3,160 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>简易太阳系模拟</title>
+    <title>我的个人博客</title>
     <style>
+        /* 这里是你的CSS样式 */
         body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
             font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background: #f4f4f4;
+            color: #333;
+        }
+        header {
+            background: #333;
             color: #fff;
+            padding: 1rem 0;
+            text-align: center;
         }
-        canvas {
-            border: 1px solid #333;
-            background-color: #050510; /* 深空背景 */
-            cursor: grab;
+        header h1 {
+            margin: 0;
         }
-        canvas.dragging {
-            cursor: grabbing;
+        nav ul {
+            padding: 0;
+            list-style: none;
+            text-align: center;
+            background: #444;
+            padding: 0.5rem 0;
         }
-        .controls {
-            margin-top: 10px;
-            display: flex;
-            gap: 20px;
-            background: rgba(0, 0, 0, 0.5);
-            padding: 10px 20px;
+        nav ul li {
+            display: inline;
+            margin: 0 15px;
+        }
+        nav ul li a {
+            color: #fff;
+            text-decoration: none;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            overflow: hidden;
+            padding: 20px 0;
+        }
+        section {
+            background: #fff;
+            padding: 20px;
+            margin-bottom: 20px;
             border-radius: 8px;
-            border: 1px solid #555;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .control-group label {
-            display: block;
-            margin-bottom: 5px;
-            color: #ccc;
-        }
-        .control-group input[type="range"] {
-            width: 150px;
-        }
-        .control-group input[type="number"] {
-            width: 60px;
-            background-color: #333;
-            border: 1px solid #555;
-            color: #fff;
-            padding: 3px;
-            border-radius: 3px;
-        }
-        h1 {
-            color: #eee;
-            margin-bottom: 10px;
-        }
-        .info-panel {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #444;
-            color: #eee;
-            font-size: 0.9em;
-            min-width: 200px;
-        }
-        .info-panel h3 {
-            margin-top: 0;
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: #333;
             color: #fff;
         }
     </style>
 </head>
 <body>
-    <h1>简易太阳系模拟器</h1>
-    <canvas id="solarSystemCanvas" width="800" height="600"></canvas>
+    <header>
+        <h1>我的个人博客</h1>
+        <p>探索、学习与分享</p>
+    </header>
 
-    <div class="controls">
-        <div class="control-group">
-            <label for="simulationSpeed">模拟速度:</label>
-            <input type="range" id="simulationSpeed" min="0.1" max="5" value="1" step="0.1">
-            <span id="speedValue">1.0x</span>
-        </div>
-        <div class="control-group">
-            <label for="planetSizeScale">行星大小比例:</label>
-            <input type="range" id="planetSizeScale" min="0.1" max="5" value="1" step="0.1">
-            <span id="sizeScaleValue">1.0x</span>
-        </div>
+    <nav>
+        <ul>
+            <li><a href="#reading-notes">读书笔记</a></li>
+            <li><a href="#wish-list">心愿清单</a></li>
+            <li><a href="#recommendations">书影推荐</a></li>
+            <li><a href="#self-study-guide">自学指南</a></li>
+            <li><a href="#course-learning">课程学习</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <section id="reading-notes">
+            <h2>读书笔记</h2>
+            <p>这里将分享我阅读书籍时的思考、感悟和重要摘录。每一本书都是一次旅程。</p>
+            <article>
+                <h3>《项目管理艺术》读后感</h3>
+                <p>摘要：这本书深入浅出地介绍了项目管理的精髓，强调了沟通和团队协作的重要性。</p>
+                <a href="#">阅读更多</a>
+            </article>
+            <article>
+                <h3>《SRE》学习笔记</h3>
+                <p>摘要：关于站点可靠性工程（SRE）的核心原则和实践，对我理解运维和开发有了新的视角。</p>
+                <a href="#">阅读更多</a>
+            </article>
+        </section>
+
+        <hr>
+
+        <section id="wish-list">
+            <h2>心愿清单</h2>
+            <p>列出我近期或长期的目标、想去的地方、想做的事情，以及想学习的技能。欢迎监督！</p>
+            <ul>
+                <li>完成一个完整的全栈项目</li>
+                <li>学习一门新的编程语言（例如：Rust）</li>
+                <li>前往日本旅行</li>
+                <li>阅读50本非虚构类书籍</li>
+                <li>掌握视频剪辑技能</li>
+            </ul>
+        </section>
+
+        <hr>
+
+        <section id="recommendations">
+            <h2>书影推荐</h2>
+            <p>我个人觉得值得一看的书籍、电影和纪录片。希望它们也能给你带来启发。</p>
+            <h3>推荐书籍</h3>
+            <ul>
+                <li>**《人类简史》**：宏大的叙事，颠覆你对历史的认知。</li>
+                <li>**《贫穷的本质》**：理解全球贫困的深刻原因和解决方案。</li>
+                <li>**《原则》**：瑞·达利欧的个人和工作原则，极具启发性。</li>
+            </ul>
+            <h3>推荐电影/纪录片</h3>
+            <ul>
+                <li>**《盗梦空间》**：烧脑但精彩的科幻电影。</li>
+                <li><li>**《地球脉动》系列**：BBC出品的顶级自然纪录片，视觉盛宴。</li>
+                <li>**《辉夜姬物语》**：宫崎骏的动画电影，独特的艺术风格和深刻的内涵。</li>
+            </ul>
+        </section>
+
+        <hr>
+
+        <section id="self-study-guide">
+            <h2>自学指南</h2>
+            <p>分享我在自学路上的经验、资源和方法论。希望能帮助到同样热爱自学的你。</p>
+            <ul>
+                <li>**如何制定有效的学习计划**：目标设定、时间管理与反馈。</li>
+                <li>**免费在线学习资源推荐**：Coursera, edX, Bilibili等平台。</li>
+                <li>**高效笔记方法**：康奈尔笔记法、思维导图的应用。</li>
+                <li>**保持学习动力的秘诀**：克服拖延，建立习惯。</li>
+            </ul>
+        </section>
+
+        <hr>
+
+        <section id="course-learning">
+            <h2>课程学习</h2>
+            <p>记录我参与过的在线课程学习笔记和心得，包括课程推荐、难点解析和项目实践。</p>
+            <article>
+                <h3>斯坦福CS229机器学习课程笔记</h3>
+                <p>摘要：对Andrew Ng教授的经典机器学习课程的重点梳理和个人理解。</p>
+                <a href="#">阅读更多</a>
+            </article>
+            <article>
+                <h3>《Python数据分析入门》实践心得</h3>
+                <p>摘要：通过实际项目操作，掌握Python数据分析的基本工具和流程。</p>
+                <a href="#">阅读更多</a>
+            </article>
+        </section>
     </div>
 
-    <div class="info-panel" id="infoPanel">
-        <h3>行星信息</h3>
-        <p>选中行星: <span id="selectedPlanetName">无</span></p>
-        <p>X坐标: <span id="selectedPlanetX">N/A</span></p>
-        <p>Y坐标: <span id="selectedPlanetY">N/A</span></p>
-        <div id="selectedPlanetParams" style="margin-top: 10px;">
-            </div>
-    </div>
-
-    <script>
-        const canvas = document.getElementById('solarSystemCanvas');
-        const ctx = canvas.getContext('2d');
-        const sunRadius = 30; // 太阳半径
-        const sunColor = 'yellow';
-
-        let simulationSpeed = 1; // 模拟速度倍数
-        let planetSizeScale = 1; // 行星大小比例
-
-        const infoPanel = document.getElementById('infoPanel');
-        const selectedPlanetNameSpan = document.getElementById('selectedPlanetName');
-        const selectedPlanetXSpan = document.getElementById('selectedPlanetX');
-        const selectedPlanetYSpan = document.getElementById('selectedPlanetY');
-        const selectedPlanetParamsDiv = document.getElementById('selectedPlanetParams');
-
-        // 行星数据 (简化，不包含真实物理属性，只用于渲染和基本轨道模拟)
-        const planets = [
-            { name: '水星', radius: 5, color: '#A0A0A0', distanceFromSun: 70, angle: 0, speed: 0.05 },
-            { name: '金星', radius: 8, color: '#D4AA6A', distanceFromSun: 100, angle: Math.PI / 4, speed: 0.03 },
-            { name: '地球', radius: 9, color: '#00BFFF', distanceFromSun: 140, angle: Math.PI / 2, speed: 0.02 },
-            { name: '火星', radius: 7, color: '#FF4500', distanceFromSun: 180, angle: 3 * Math.PI / 4, speed: 0.015 },
-            { name: '木星', radius: 20, color: '#CD853F', distanceFromSun: 250, angle: Math.PI, speed: 0.008 },
-            { name: '土星', radius: 18, color: '#DAA520', distanceFromSun: 320, angle: 5 * Math.PI / 4, speed: 0.006 },
-            { name: '天王星', radius: 15, color: '#ADD8E6', distanceFromSun: 380, angle: 3 * Math.PI / 2, speed: 0.004 },
-            { name: '海王星', radius: 14, color: '#4169E1', distanceFromSun: 430, angle: 7 * Math.PI / 4, speed: 0.003 }
-        ];
-
-        let draggingPlanet = null; // 正在拖拽的行星
-        let dragOffsetX = 0;
-        let dragOffsetY = 0;
-
-        let selectedPlanet = null; // 当前选中的行星
-
-        // 绘制函数
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // 清空画布
-
-            // 绘制太阳 (画布中心)
-            const sunX = canvas.width / 2;
-            const sunY = canvas.height / 2;
-            ctx.beginPath();
-            ctx.arc(sunX, sunY, sunRadius, 0, Math.PI * 2);
-            ctx.fillStyle = sunColor;
-            ctx.shadowColor = 'orange';
-            ctx.shadowBlur = 20;
-            ctx.fill();
-            ctx.shadowBlur = 0; // 重置阴影，避免影响行星
-
-            // 绘制行星
-            planets.forEach(planet => {
-                // 更新行星角度 (模拟轨道运动)
-                if (draggingPlanet !== planet) { // 拖拽时停止自动移动
-                    planet.angle += planet.speed * simulationSpeed;
-                }
-
-                // 计算行星位置
-                planet.x = sunX + planet.distanceFromSun * Math.cos(planet.angle);
-                planet.y = sunY + planet.distanceFromSun * Math.sin(planet.angle);
-
-                // 绘制轨道（虚线）
-                ctx.beginPath();
-                ctx.arc(sunX, sunY, planet.distanceFromSun, 0, Math.PI * 2);
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-                ctx.setLineDash([2, 5]); // 虚线
-                ctx.stroke();
-                ctx.setLineDash([]); // 实线
-
-                // 绘制行星
-                ctx.beginPath();
-                ctx.arc(planet.x, planet.y, planet.radius * planetSizeScale, 0, Math.PI * 2);
-                ctx.fillStyle = planet.color;
-                ctx.fill();
-
-                // 如果选中，绘制高亮边框
-                if (selectedPlanet === planet) {
-                    ctx.strokeStyle = '#00FFFF'; // 青色高亮
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-                    ctx.lineWidth = 1;
-                }
-
-                // 绘制行星名称 (可选)
-                ctx.fillStyle = '#fff';
-                ctx.font = '10px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText(planet.name, planet.x, planet.y + planet.radius * planetSizeScale + 12);
-            });
-
-            // 更新信息面板
-            if (selectedPlanet) {
-                selectedPlanetNameSpan.textContent = selectedPlanet.name;
-                selectedPlanetXSpan.textContent = selectedPlanet.x.toFixed(2);
-                selectedPlanetYSpan.textContent = selectedPlanet.y.toFixed(2);
-                updateSelectedPlanetParams();
-            } else {
-                selectedPlanetNameSpan.textContent = '无';
-                selectedPlanetXSpan.textContent = 'N/A';
-                selectedPlanetYSpan.textContent = 'N/A';
-                selectedPlanetParamsDiv.innerHTML = '';
-            }
-
-            requestAnimationFrame(draw); // 循环调用 draw
-        }
-
-        // --- 鼠标交互部分 ---
-
-        // 获取鼠标在 canvas 上的坐标
-        function getMousePos(e) {
-            const rect = canvas.getBoundingClientRect();
-            return {
-                x: e.clientX - rect.left,
-                y: e.clientY - rect.top
-            };
-        }
-
-        // 检测鼠标是否在行星上
-        function isMouseOverPlanet(mousePos, planet) {
-            const dx = mousePos.x - planet.x;
-            const dy = mousePos.y - planet.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            return distance < planet.radius * planetSizeScale;
-        }
-
-        canvas.addEventListener('mousedown', (e) => {
-            const mousePos = getMousePos(e);
-            let clickedOnPlanet = false;
-
-            // 从后往前遍历，确保点击到最上层的行星
-            for (let i = planets.length - 1; i >= 0; i--) {
-                const planet = planets[i];
-                if (isMouseOverPlanet(mousePos, planet)) {
-                    draggingPlanet = planet;
-                    dragOffsetX = mousePos.x - planet.x;
-                    dragOffsetY = mousePos.y - planet.y;
-                    canvas.classList.add('dragging'); // 改变鼠标样式
-                    selectedPlanet = planet; // 选中点击的行星
-                    updateSelectedPlanetParams(); // 更新参数面板
-                    clickedOnPlanet = true;
-                    break;
-                }
-            }
-
-            if (!clickedOnPlanet) {
-                selectedPlanet = null; // 如果没点击到任何行星，则取消选中
-            }
-        });
-
-        canvas.addEventListener('mousemove', (e) => {
-            if (draggingPlanet) {
-                const mousePos = getMousePos(e);
-                draggingPlanet.x = mousePos.x - dragOffsetX;
-                draggingPlanet.y = mousePos.y - dragOffsetY;
-
-                // 更新距离太阳的角度和距离 (如果需要拖拽后保持相对位置)
-                const sunX = canvas.width / 2;
-                const sunY = canvas.height / 2;
-                const dx = draggingPlanet.x - sunX;
-                const dy = draggingPlanet.y - sunY;
-                draggingPlanet.distanceFromSun = Math.sqrt(dx * dx + dy * dy);
-                draggingPlanet.angle = Math.atan2(dy, dx); // 更新角度
-            }
-        });
-
-        canvas.addEventListener('mouseup', () => {
-            draggingPlanet = null;
-            canvas.classList.remove('dragging');
-        });
-
-        canvas.addEventListener('mouseleave', () => {
-            // 当鼠标离开canvas时，如果正在拖拽，也应该停止拖拽
-            draggingPlanet = null;
-            canvas.classList.remove('dragging');
-        });
-
-        // --- 控制面板交互 ---
-        const simulationSpeedControl = document.getElementById('simulationSpeed');
-        const speedValueSpan = document.getElementById('speedValue');
-        simulationSpeedControl.addEventListener('input', (e) => {
-            simulationSpeed = parseFloat(e.target.value);
-            speedValueSpan.textContent = simulationSpeed.toFixed(1) + 'x';
-        });
-
-        const planetSizeScaleControl = document.getElementById('planetSizeScale');
-        const sizeScaleValueSpan = document.getElementById('sizeScaleValue');
-        planetSizeScaleControl.addEventListener('input', (e) => {
-            planetSizeScale = parseFloat(e.target.value);
-            sizeScaleValueSpan.textContent = planetSizeScale.toFixed(1) + 'x';
-        });
-
-        // 更新选中行星的参数修改器
-        function updateSelectedPlanetParams() {
-            selectedPlanetParamsDiv.innerHTML = ''; // 清空旧内容
-            if (selectedPlanet) {
-                // 示例：修改行星的半径、距离和速度
-                const params = ['radius', 'distanceFromSun', 'speed'];
-                params.forEach(param => {
-                    const label = document.createElement('label');
-                    label.textContent = `${param}: `;
-                    const input = document.createElement('input');
-                    input.type = 'number';
-                    input.step = '0.1';
-                    input.value = selectedPlanet[param];
-                    input.addEventListener('change', (e) => {
-                        selectedPlanet[param] = parseFloat(e.target.value);
-                        // 如果修改了 distanceFromSun，需要重新计算angle
-                        if (param === 'distanceFromSun') {
-                             const sunX = canvas.width / 2;
-                             const sunY = canvas.height / 2;
-                             selectedPlanet.x = sunX + selectedPlanet.distanceFromSun * Math.cos(selectedPlanet.angle);
-                             selectedPlanet.y = sunY + selectedPlanet.distanceFromSun * Math.sin(selectedPlanet.angle);
-                        }
-                    });
-                    selectedPlanetParamsDiv.appendChild(label);
-                    selectedPlanetParamsDiv.appendChild(input);
-                    selectedPlanetParamsDiv.appendChild(document.createElement('br'));
-                });
-            }
-        }
-
-        // 启动动画
-        draw();
-    </script>
+    <footer>
+        <p>&copy; 2025 我的个人博客. 版权所有.</p>
+    </footer>
 </body>
 </html>
