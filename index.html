@@ -389,11 +389,12 @@
                     if (enemy.isHoming && (Date.now() - enemy.lastMissileShot > enemy.missileRate)) {
                         enemy.lastMissileShot = Date.now();
                         missiles.push({
-                            x: enemy.x + enemy.width / 2 - 5,
+                            // *** (修改 1) ***
+                            x: enemy.x + enemy.width / 2 - 10, // 导弹更宽，中心点偏移
                             y: enemy.y + enemy.height,
-                            width: 10,
-                            height: 20,
-                            speed: 4 + (score / 2000) // 导弹速度也增加
+                            width: 20,  // 变大：10 -> 20
+                            height: 30, // 变大：20 -> 30
+                            speed: 2.5 + (score / 3000) // 变慢：(4 + score/2000) -> (2.5 + score/3000)
                         });
                     }
 
@@ -427,20 +428,47 @@
                     }
                 }
 
-                // 6. 碰撞检测：子弹 vs 敌人
+                // *** (修改 2) ***
+                // 6. 碰撞检测：子弹 vs (敌人 or 导弹)
                 for (let i = bullets.length - 1; i >= 0; i--) {
+                    // 检查子弹是否存在 (可能在上一次迭代中被移除了)
+                    if (!bullets[i]) continue;
+                    
+                    let bullet = bullets[i];
+                    let bulletRemoved = false;
+
+                    // 6a. 子弹 vs 敌人
                     for (let j = enemies.length - 1; j >= 0; j--) {
-                        if (checkCollision(bullets[i], enemies[j])) {
+                        if (checkCollision(bullet, enemies[j])) {
                             // 击中
                             score += 10;
-                            scoreDisplay.textContent = `得分: ${score}`;
                             
                             enemies.splice(j, 1); // 移除敌人
+                            bullets.splice(i, 1); // 移除子弹
+                            bulletRemoved = true;
+                            break; // 子弹已消失，跳出内循环
+                        }
+                    }
+
+                    if (bulletRemoved) {
+                        continue; // 子弹已消失，检查下一颗
+                    }
+
+                    // 6b. 子弹 vs 导弹
+                    for (let j = missiles.length - 1; j >= 0; j--) {
+                        if (checkCollision(bullet, missiles[j])) {
+                            // 击中导弹
+                            score += 5; // 击落导弹+5分
+
+                            missiles.splice(j, 1); // 移除导弹
                             bullets.splice(i, 1); // 移除子弹
                             break; // 子弹已消失，跳出内循环
                         }
                     }
                 }
+                
+                // 统一更新分数显示
+                scoreDisplay.textContent = `得分: ${score}`;
             }
 
             // === 9. 绘制逻辑 (Draw) ===
