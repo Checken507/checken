@@ -1,486 +1,503 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>打飞机游戏 - 最终修复版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>飞机大战 (H5)</title>
+
     <style>
-        /* CSS 样式 - 保持不变 */
-        body {
+        /* CSS Reset 和全屏设置 */
+        * {
+            box-sizing: border-box;
             margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #000;
-            overflow: hidden;
-            touch-action: none;
-            font-family: Arial, sans-serif;
+            padding: 0;
         }
-        
-        canvas {
+        html, body {
             width: 100%;
-            max-width: 480px; 
-            border: 2px solid #333;
-            background-color: #000; 
             height: 100%;
+            overflow: hidden; /* 防止页面滚动 */
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #111;
+            color: #fff;
         }
-        
-        #shootButton {
+
+        /* 游戏容器：用于定位所有UI元素 */
+        #game-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background-color: #000;
+        }
+
+        /* 游戏画布 */
+        #game-canvas {
+            width: 100%;
+            height: 100%;
+            display: none; /* 默认隐藏，游戏开始时显示 */
+            background-color: #000;
+        }
+
+        /* 菜单通用样式 */
+        .menu {
             position: absolute;
-            bottom: 20px;
-            right: 20px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 400px;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.8);
+            border: 2px solid #fff;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        .menu h1, .menu h2 {
+            margin-bottom: 20px;
+        }
+        .menu input, .menu button {
+            font-size: 16px;
+            padding: 12px;
+            margin: 10px 0;
+            width: 100%;
+            border-radius: 5px;
+            border: none;
+        }
+        .menu button {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+        .menu button:hover {
+            background-color: #45a049;
+        }
+
+        /* 排行榜列表 */
+        #high-score-list {
+            text-align: left;
+            margin: 20px auto 0;
+            padding-left: 30px;
+            list-style: decimal;
+        }
+        #high-score-list li {
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+
+        /* 游戏中的UI元素 */
+        #score-display {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 1px 1px 2px #000;
+            z-index: 5;
+            display: none; /* 游戏开始时显示 */
+        }
+
+        /* 关键：移动端开火按钮 */
+        #fire-button {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
             width: 80px;
             height: 80px;
-            border-radius: 50%;
-            background-color: rgba(255, 0, 0, 0.7);
-            color: white;
-            font-size: 16px;
-            line-height: 80px;
-            text-align: center;
-            border: 3px solid white;
-            z-index: 10;
-            user-select: none;
-            cursor: pointer;
-            display: none; 
+            background-color: rgba(255, 0, 0, 0.5);
+            border: 3px solid rgba(255, 255, 255, 0.7);
+            border-radius: 50%; /* 圆形按钮 */
+            z-index: 5;
+            display: none; /* 游戏开始时显示 */
+            
+            /* 防止点击时出现蓝色高亮 */
+            -webkit-tap-highlight-color: transparent; 
         }
-
-        .modal {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.9);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            z-index: 20;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        
-        .modal-content {
-            background: #222;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
-            max-width: 90%;
-            max-height: 90%;
-            overflow-y: auto;
-            text-align: center;
-        }
-
-        #nicknameInput {
-            padding: 10px;
-            margin: 10px 0 20px 0;
-            border-radius: 5px;
-            border: none;
-            width: 90%;
-            text-align: center;
-            font-size: 18px;
-        }
-        
-        .start-button {
-            padding: 10px 20px;
-            font-size: 20px;
-            cursor: pointer;
-            background-color: #4CAF50;
-            border: none;
-            border-radius: 5px;
-            color: white;
-            margin-top: 10px;
-        }
-        
-        #rankingList {
-            list-style: none;
-            padding: 0;
-            text-align: left;
-            width: 100%;
-            margin-top: 15px;
-            font-size: 16px;
-        }
-        
-        #rankingList li {
-            padding: 5px 0;
-            border-bottom: 1px dashed #555;
-            display: flex;
-            justify-content: space-between;
+        #fire-button:active {
+            background-color: rgba(255, 0, 0, 0.8); /* 按下时变色 */
         }
     </style>
 </head>
 <body>
-    <canvas id="gameCanvas" width="480" height="640"></canvas>
-    
-    <div id="shootButton">开火</div>
 
-    <div id="startModal" class="modal">
-        <div class="modal-content">
-            <h2 id="modalTitle">打飞机游戏</h2>
-            <p id="modalMessage">请输入您的昵称开始游戏:</p>
-            <input type="text" id="nicknameInput" placeholder="请输入昵称" value="玩家">
-            <button id="startButton" class="start-button">开始游戏</button>
-            
-            <h3>🚀 排行榜 (前 10)</h3>
-            <ul id="rankingList">
-                </ul>
+    <div id="game-container">
+        
+        <div id="start-menu" class="menu">
+            <h1>飞机大战</h1>
+            <input type="text" id="player-name-input" placeholder="输入你的名字">
+            <button id="start-button">开始游戏</button>
+            <h3>本地最高分 (Top 10):</h3>
+            <ol id="high-score-list"></ol>
         </div>
+
+        <canvas id="game-canvas"></canvas>
+
+        <div id="score-display">得分: 0</div>
+        <button id="fire-button"></button>
+
+        <div id="game-over-menu" class="menu" style="display: none;">
+            <h2>游戏结束</h2>
+            <p style="font-size: 20px; margin: 15px 0;">
+                最终得分: <span id="final-score">0</span>
+            </p>
+            <button id="restart-button">重新开始</button>
+            <button id="main-menu-button">返回主菜单</button>
+        </div>
+
     </div>
 
     <script>
-        // *** 关键修复：确保所有代码在 DOM 加载完成后运行 ***
         document.addEventListener('DOMContentLoaded', () => {
 
-            // --- 核心变量 ---
-            const canvas = document.getElementById('gameCanvas');
+            // === 1. DOM 元素获取 ===
+            const canvas = document.getElementById('game-canvas');
             const ctx = canvas.getContext('2d');
-            const shootButton = document.getElementById('shootButton');
-            const startModal = document.getElementById('startModal');
-            const modalTitle = document.getElementById('modalTitle');
-            const modalMessage = document.getElementById('modalMessage');
-            const nicknameInput = document.getElementById('nicknameInput');
-            const rankingList = document.getElementById('rankingList');
-            const startButton = document.getElementById('startButton');
+            const startMenu = document.getElementById('start-menu');
+            const gameOverMenu = document.getElementById('game-over-menu');
+            const startButton = document.getElementById('start-button');
+            const restartButton = document.getElementById('restart-button');
+            const mainMenuButton = document.getElementById('main-menu-button');
+            const playerNameInput = document.getElementById('player-name-input');
+            const highScoreList = document.getElementById('high-score-list');
+            const finalScoreEl = document.getElementById('final-score');
+            const scoreDisplay = document.getElementById('score-display');
+            const fireButton = document.getElementById('fire-button');
 
-            const GAME_WIDTH = canvas.width;
-            const GAME_HEIGHT = canvas.height;
-            
-            let isGameActive = false;
-            let isGameOver = false;
-            let score = 0;
-            let playerName = '玩家';
-            let lastEnemyTime = 0;
-            const ENEMY_SPAWN_INTERVAL = 1000; 
+            // === 2. 游戏变量 ===
+            let player, bullets, enemies, missiles, score, gameLoopId, playerName;
+            let gameIsOver = false;
+            let isFiring = false; // 玩家是否按住开火
+            let lastEnemySpawn = 0;
+            let enemySpawnInterval = 1000; // 敌人生成间隔 (ms)
+            const playerSize = { width: 50, height: 50 }; // 玩家贴图大小
+            const enemySize = { width: 50, height: 50 }; // 敌人贴图大小
 
-            // 实例变量
-            let playerInstance = null;
-            let enemies = [];
+            // === 3. 加载贴图 ===
+            const playerImg = new Image();
+            playerImg.src = 'assets/player.png';
 
-            // --- 1. 图片导入路径 ---
-            const ASSET_PATHS = {
-                player: 'assets/player.png',
-                enemy: 'assets/enemy.png',
-                bullet: 'assets/bullet.png'
-            };
-            const IMAGES = {};
-            let assetsLoaded = 0;
-            const totalAssets = Object.keys(ASSET_PATHS).length;
+            const enemy1Img = new Image(); // 不会射击
+            enemy1Img.src = 'assets/player1.png';
 
-            function loadAssets() {
-                return new Promise(resolve => {
-                    let assetsToLoad = totalAssets;
-                    if (assetsToLoad === 0) {
-                        resolve();
-                        return;
-                    }
+            const enemy2Img = new Image(); // 会射击 (跟踪型)
+            enemy2Img.src = 'assets/player2.png';
 
-                    for (let key in ASSET_PATHS) {
-                        const img = new Image();
-                        img.onload = () => {
-                            IMAGES[key] = img;
-                            assetsLoaded++;
-                            if (assetsLoaded === assetsToLoad) {
-                                resolve();
-                            }
-                        };
-                        img.onerror = () => {
-                            console.warn(`图片加载失败: ${ASSET_PATHS[key]}。将使用方块代替。`);
-                            assetsLoaded++; 
-                            if (assetsLoaded === assetsToLoad) {
-                                resolve();
-                            }
-                        };
-                        img.src = ASSET_PATHS[key];
-                    }
-                });
-            }
-            
-            // --- 游戏对象构造函数 ---
-            
-            class GameObject {
-                constructor(x, y, width, height, imageKey) {
-                    this.x = x;
-                    this.y = y;
-                    this.width = width;
-                    this.height = height;
-                    this.isAlive = true;
-                    this.image = IMAGES[imageKey];
-                    this.color = (imageKey === 'player') ? 'blue' : (imageKey === 'enemy' ? 'red' : 'yellow');
-                }
+            // === 4. 排行榜 (LocalStorage) ===
+            const HIGH_SCORES_KEY = 'planeShooterHighScores';
 
-                draw() {
-                    if (this.image && this.image.complete && this.image.naturalWidth > 0) {
-                        ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
-                    } else {
-                        ctx.fillStyle = this.color;
-                        ctx.fillRect(this.x, this.y, this.width, this.height);
-                    }
-                }
-            }
-            
-            class Player extends GameObject {
-                constructor() {
-                    super(GAME_WIDTH / 2 - 25, GAME_HEIGHT - 80, 50, 50, 'player');
-                    this.bullets = [];
-                    this.touchOffsetX = 0; 
-                }
-                fire() {
-                    this.bullets.push(new Bullet(this.x + this.width / 2 - 2.5, this.y));
-                }
+            function getHighScores() {
+                const scores = localStorage.getItem(HIGH_SCORES_KEY);
+                return scores ? JSON.parse(scores) : [];
             }
 
-            class Enemy extends GameObject {
-                constructor(x, y) {
-                    super(x, y, 40, 40, 'enemy');
-                    this.speed = 1 + Math.random() * 2; 
-                }
-                update() {
-                    this.y += this.speed; 
-                    if (this.y > GAME_HEIGHT) {
-                        this.isAlive = false;
-                    }
-                }
+            function saveHighScore(name, score) {
+                if (score === 0) return; // 0分不记录
+                const scores = getHighScores();
+                scores.push({ name, score });
+                scores.sort((a, b) => b.score - a.score);
+                const top10 = scores.slice(0, 10);
+                localStorage.setItem(HIGH_SCORES_KEY, JSON.stringify(top10));
             }
 
-            class Bullet extends GameObject {
-                constructor(x, y) {
-                    super(x, y, 5, 10, 'bullet');
-                    this.speed = -7; 
-                }
-                update() {
-                    this.y += this.speed;
-                    if (this.y < 0) {
-                        this.isAlive = false;
-                    }
-                }
-            }
-
-            // --- 重置和排行榜功能 ---
-
-            function resetGame() {
-                score = 0;
-                isGameOver = false;
-                playerInstance = new Player();
-                enemies = [];
-                lastEnemyTime = 0;
-            }
-
-            const RANKING_KEY = 'shooterLeaderboard';
-            
-            function loadRanking() {
-                const rankingData = localStorage.getItem(RANKING_KEY);
-                return rankingData ? JSON.parse(rankingData) : [];
-            }
-
-            function saveScore(name, score) {
-                const ranking = loadRanking();
-                ranking.push({ name, score, date: new Date().toLocaleDateString() });
-                
-                ranking.sort((a, b) => b.score - a.score);
-                const topTen = ranking.slice(0, 10);
-                
-                localStorage.setItem(RANKING_KEY, JSON.stringify(topTen));
-                return topTen;
-            }
-
-            function renderRanking(ranking) {
-                rankingList.innerHTML = '';
-                if (ranking.length === 0) {
-                    rankingList.innerHTML = '<li>暂无得分记录。</li>';
-                    return;
-                }
-                
-                ranking.forEach((item, index) => {
-                    const li = document.createElement('li');
-                    li.innerHTML = `
-                        <span>No.${index + 1} - ${item.name}</span>
-                        <span>${item.score} 分</span>
-                    `;
-                    rankingList.appendChild(li);
-                });
-            }
-            
-            function showModal(title, message, isFinalScore = false) {
-                modalTitle.textContent = title;
-                modalMessage.innerHTML = message;
-                
-                isGameActive = false; // 暂停游戏逻辑
-                
-                if (isFinalScore) {
-                    const ranking = saveScore(playerName, score);
-                    renderRanking(ranking);
-                    startButton.textContent = '再玩一次';
-                    nicknameInput.style.display = 'none';
+            function displayHighScores() {
+                const scores = getHighScores();
+                highScoreList.innerHTML = ''; // 清空
+                if (scores.length === 0) {
+                    highScoreList.innerHTML = '<li>暂无记录</li>';
                 } else {
-                    renderRanking(loadRanking());
-                    startButton.textContent = '开始游戏';
-                    nicknameInput.style.display = 'block';
+                    scores.forEach(item => {
+                        const li = document.createElement('li');
+                        li.textContent = `${item.name}: ${item.score}`;
+                        highScoreList.appendChild(li);
+                    });
                 }
-                
-                startModal.style.display = 'flex';
-                shootButton.style.display = 'none';
             }
+
+            // === 5. 游戏状态管理 ===
             
-            // --- 触摸事件处理 ---
-            
-            function getTouchPos(touch) {
-                const rect = canvas.getBoundingClientRect();
-                const scaleX = GAME_WIDTH / rect.width;
-                const scaleY = GAME_HEIGHT / rect.height;
-                return {
-                    x: (touch.clientX - rect.left) * scaleX,
-                    y: (touch.clientY - rect.top) * scaleY
+            // 页面加载时显示排行榜
+            displayHighScores();
+
+            // 监听按钮
+            startButton.addEventListener('click', startGame);
+            restartButton.addEventListener('click', startGame);
+            mainMenuButton.addEventListener('click', () => {
+                gameOverMenu.style.display = 'none';
+                startMenu.style.display = 'block';
+                displayHighScores(); // 刷新排行榜
+            });
+
+            function startGame() {
+                playerName = playerNameInput.value || '匿名玩家';
+                
+                // 设置画布全屏
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+
+                // 初始化游戏
+                player = { 
+                    x: canvas.width / 2 - playerSize.width / 2, 
+                    y: canvas.height - playerSize.height - 80, // 底部
+                    width: playerSize.width, 
+                    height: playerSize.height,
+                    lastShotTime: 0,
+                    fireRate: 250 // 射速 (ms)
                 };
+                bullets = [];
+                enemies = [];
+                missiles = [];
+                score = 0;
+                gameIsOver = false;
+                lastEnemySpawn = Date.now();
+                enemySpawnInterval = 1000; // 重置难度
+
+                // 更新UI
+                scoreDisplay.textContent = `得分: 0`;
+                startMenu.style.display = 'none';
+                gameOverMenu.style.display = 'none';
+                canvas.style.display = 'block';
+                scoreDisplay.style.display = 'block';
+                fireButton.style.display = 'block';
+
+                // 停止旧循环并开始新循环
+                if (gameLoopId) {
+                    cancelAnimationFrame(gameLoopId);
+                }
+                gameLoop();
             }
 
-            canvas.addEventListener('touchstart', (e) => {
-                if (!isGameActive) return;
-                const pos = getTouchPos(e.touches[0]);
+            function triggerGameOver() {
+                if (gameIsOver) return; // 防止重复触发
                 
-                if (pos.x > playerInstance.x - 10 && pos.x < playerInstance.x + playerInstance.width + 10 &&
-                    pos.y > playerInstance.y - 10 && pos.y < playerInstance.y + playerInstance.height + 10) {
+                gameIsOver = true;
+                cancelAnimationFrame(gameLoopId);
+
+                // 更新UI
+                canvas.style.display = 'none';
+                scoreDisplay.style.display = 'none';
+                fireButton.style.display = 'none';
+                gameOverMenu.style.display = 'block';
+                
+                finalScoreEl.textContent = score;
+                saveHighScore(playerName, score);
+            }
+
+            // === 6. 移动端控制 ===
+            
+            // 阻止画布上的触摸默认行为（如滚动）
+            canvas.addEventListener('touchstart', (e) => e.preventDefault());
+            canvas.addEventListener('touchmove', (e) => e.preventDefault());
+
+            // 1. 玩家移动 (跟随手指)
+            function movePlayer(e) {
+                if (gameIsOver || !player) return;
+                let touch = e.touches[0];
+                
+                // 计算玩家中心位置
+                player.x = touch.clientX - player.width / 2;
+                player.y = touch.clientY - player.height / 2;
+
+                // 边界检测
+                if (player.x < 0) player.x = 0;
+                if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+                if (player.y < 0) player.y = 0;
+                if (player.y + player.height > canvas.height) player.y = canvas.height - player.height;
+            }
+            canvas.addEventListener('touchstart', movePlayer);
+            canvas.addEventListener('touchmove', movePlayer);
+
+            // 2. 开火按钮 (按住即开火)
+            // 'touchstart' 相当于 'mousedown'
+            fireButton.addEventListener('touchstart', (e) => {
+                e.preventDefault(); // 防止触发点击等事件
+                isFiring = true;
+            });
+            // 'touchend' 相当于 'mouseup'
+            fireButton.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                isFiring = false;
+            });
+
+            // === 7. 游戏主循环 ===
+            function gameLoop() {
+                if (gameIsOver) return;
+
+                update();
+                draw();
+
+                gameLoopId = requestAnimationFrame(gameLoop);
+            }
+
+            // === 8. 更新逻辑 (Update) ===
+            function update() {
+                // 1. 玩家开火
+                if (isFiring && (Date.now() - player.lastShotTime > player.fireRate)) {
+                    player.lastShotTime = Date.now();
+                    bullets.push({
+                        x: player.x + player.width / 2 - 2.5, // 子弹中心
+                        y: player.y,
+                        width: 5,
+                        height: 15,
+                        speed: 10
+                    });
+                }
+
+                // 2. 更新子弹
+                for (let i = bullets.length - 1; i >= 0; i--) {
+                    bullets[i].y -= bullets[i].speed;
+                    if (bullets[i].y < 0) {
+                        bullets.splice(i, 1); // 移除飞出屏幕的子弹
+                    }
+                }
+
+                // 3. 生成敌人
+                if (Date.now() - lastEnemySpawn > enemySpawnInterval) {
+                    lastEnemySpawn = Date.now();
                     
-                    playerInstance.touchOffsetX = pos.x - playerInstance.x;
+                    let isHomingType = Math.random() < 0.3; // 30% 几率是跟踪型
+                    enemies.push({
+                        x: Math.random() * (canvas.width - enemySize.width),
+                        y: -enemySize.height,
+                        width: enemySize.width,
+                        height: enemySize.height,
+                        speed: 2 + (score / 1000), // 速度随分数增加
+                        isHoming: isHomingType,
+                        img: isHomingType ? enemy2Img : enemy1Img,
+                        lastMissileShot: 0,
+                        missileRate: 2000 // 跟踪导弹射速
+                    });
+
+                    // 增加难度
+                    if (enemySpawnInterval > 300) {
+                        enemySpawnInterval -= 10;
+                    }
+                }
+
+                // 4. 更新敌人
+                for (let i = enemies.length - 1; i >= 0; i--) {
+                    let enemy = enemies[i];
+                    enemy.y += enemy.speed;
+
+                    // 飞出屏幕
+                    if (enemy.y > canvas.height) {
+                        enemies.splice(i, 1);
+                        continue;
+                    }
+
+                    // 跟踪型敌人发射导弹
+                    if (enemy.isHoming && (Date.now() - enemy.lastMissileShot > enemy.missileRate)) {
+                        enemy.lastMissileShot = Date.now();
+                        missiles.push({
+                            x: enemy.x + enemy.width / 2 - 5,
+                            y: enemy.y + enemy.height,
+                            width: 10,
+                            height: 20,
+                            speed: 4 + (score / 2000) // 导弹速度也增加
+                        });
+                    }
+
+                    // 碰撞检测：敌人 vs 玩家
+                    if (checkCollision(player, enemy)) {
+                        triggerGameOver();
+                    }
+                }
+
+                // 5. 更新跟踪导弹
+                for (let i = missiles.length - 1; i >= 0; i--) {
+                    let missile = missiles[i];
+                    
+                    // === 跟踪逻辑 ===
+                    let dx = (player.x + player.width / 2) - (missile.x + missile.width / 2);
+                    let dy = (player.y + player.height / 2) - (missile.y + missile.height / 2);
+                    let distance = Math.sqrt(dx * dx + dy * dy) || 1;
+                    
+                    missile.x += (dx / distance) * missile.speed;
+                    missile.y += (dy / distance) * missile.speed;
+                    // === 跟踪结束 ===
+
+                    if (missile.y > canvas.height) {
+                        missiles.splice(i, 1);
+                        continue;
+                    }
+
+                    // 碰撞检测：导弹 vs 玩家
+                    if (checkCollision(player, missile)) {
+                        triggerGameOver();
+                    }
+                }
+
+                // 6. 碰撞检测：子弹 vs 敌人
+                for (let i = bullets.length - 1; i >= 0; i--) {
+                    for (let j = enemies.length - 1; j >= 0; j--) {
+                        if (checkCollision(bullets[i], enemies[j])) {
+                            // 击中
+                            score += 10;
+                            scoreDisplay.textContent = `得分: ${score}`;
+                            
+                            enemies.splice(j, 1); // 移除敌人
+                            bullets.splice(i, 1); // 移除子弹
+                            break; // 子弹已消失，跳出内循环
+                        }
+                    }
+                }
+            }
+
+            // === 9. 绘制逻辑 (Draw) ===
+            function draw() {
+                // 清空画布
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // 绘制玩家
+                if (playerImg.complete) {
+                    ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
                 } else {
-                    playerInstance.touchOffsetX = null;
+                    ctx.fillStyle = 'blue'; // 图片加载失败时的备用
+                    ctx.fillRect(player.x, player.y, player.width, player.height);
+                }
+
+                // 绘制敌人
+                enemies.forEach(enemy => {
+                    if (enemy.img.complete) {
+                        ctx.drawImage(enemy.img, enemy.x, enemy.y, enemy.width, enemy.height);
+                    } else {
+                        // 备用
+                        ctx.fillStyle = enemy.isHoming ? 'red' : 'green';
+                        ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+                    }
+                });
+
+                // 绘制子弹
+                ctx.fillStyle = '#fff';
+                bullets.forEach(bullet => {
+                    ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+                });
+
+                // 绘制导弹
+                ctx.fillStyle = 'orange';
+                missiles.forEach(missile => {
+                    ctx.fillRect(missile.x, missile.y, missile.width, missile.height);
+                });
+            }
+
+            // === 10. 辅助函数 ===
+            
+            // AABB 碰撞检测
+            function checkCollision(rect1, rect2) {
+                return rect1.x < rect2.x + rect2.width &&
+                       rect1.x + rect1.width > rect2.x &&
+                       rect1.y < rect2.y + rect2.height &&
+                       rect1.y + rect1.height > rect2.y;
+            }
+
+            // 窗口大小改变时重置画布（在游戏中不推荐，但开始时需要）
+            window.addEventListener('resize', () => {
+                if (!gameIsOver) {
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
                 }
             });
 
-            canvas.addEventListener('touchmove', (e) => {
-                if (!isGameActive || playerInstance.touchOffsetX === null) return;
-                e.preventDefault(); 
-                
-                const pos = getTouchPos(e.touches[0]);
-                let newX = pos.x - playerInstance.touchOffsetX;
-                
-                newX = Math.max(0, Math.min(GAME_WIDTH - playerInstance.width, newX));
-                playerInstance.x = newX;
-            });
-            
-            canvas.addEventListener('touchend', () => {
-                playerInstance.touchOffsetX = null;
-            });
-
-            // 射击按钮事件
-            shootButton.addEventListener('touchstart', (e) => {
-                e.preventDefault(); 
-                if (isGameActive) playerInstance.fire();
-            });
-            shootButton.addEventListener('mousedown', (e) => {
-                 if (isGameActive) playerInstance.fire();
-            });
-            
-            // 关键修复点：开始/重新开始
-            startButton.onclick = () => {
-                resetGame();
-                
-                playerName = nicknameInput.value.trim() || '玩家';
-                
-                startModal.style.display = 'none';
-                shootButton.style.display = 'block';
-                
-                isGameActive = true; 
-            };
-
-            // --- 游戏循环函数 ---
-            let animationFrameId = null;
-
-            function gameLoop(currentTime) {
-                
-                // 1. 清空画布
-                ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-                
-                if (isGameActive) {
-                    // --- 游戏逻辑更新 ---
-
-                    // 2. 敌人生成
-                    if (currentTime - lastEnemyTime > ENEMY_SPAWN_INTERVAL) {
-                        const randomX = Math.random() * (GAME_WIDTH - 40); 
-                        enemies.push(new Enemy(randomX, -40));
-                        lastEnemyTime = currentTime;
-                    }
-
-                    // 3. 更新、绘制子弹和碰撞检测
-                    playerInstance.bullets.forEach(bullet => {
-                        if (bullet.isAlive) {
-                            bullet.update();
-                            bullet.draw();
-                            
-                            enemies.forEach(enemy => {
-                                if (enemy.isAlive && 
-                                    bullet.x < enemy.x + enemy.width &&
-                                    bullet.x + bullet.width > enemy.x &&
-                                    bullet.y < enemy.y + enemy.height &&
-                                    bullet.y + bullet.height > enemy.y) 
-                                {
-                                    enemy.isAlive = false;
-                                    bullet.isAlive = false;
-                                    score += 10; 
-                                }
-                            });
-                        }
-                    });
-
-                    // 4. 更新、绘制敌人和碰撞检测
-                    enemies.forEach(enemy => {
-                        if (enemy.isAlive) {
-                            enemy.update();
-                            enemy.draw();
-                            
-                            if (playerInstance.x < enemy.x + enemy.width &&
-                                playerInstance.x + playerInstance.width > enemy.x &&
-                                playerInstance.y < enemy.y + enemy.height &&
-                                playerInstance.y + playerInstance.height > enemy.y) 
-                            {
-                                isGameOver = true;
-                            }
-                        }
-                    });
-
-                    // 5. 过滤掉死亡的对象
-                    playerInstance.bullets = playerInstance.bullets.filter(b => b.isAlive);
-                    enemies = enemies.filter(e => e.isAlive);
-
-                    // 6. 绘制玩家
-                    playerInstance.draw();
-                    
-                    // 7. 绘制分数和昵称
-                    ctx.fillStyle = 'white';
-                    ctx.font = '24px Arial';
-                    ctx.fillText(`昵称: ${playerName}`, 10, 30);
-                    ctx.fillText(`得分: ${score}`, 10, 60);
-
-                    // 8. 检查游戏是否结束
-                    if (isGameOver) {
-                        showModal('游戏结束', `<p>昵称: <b>${playerName}</b></p>您的最终得分是: <b>${score}</b> 分`, true);
-                    }
-                } else {
-                    // 如果游戏未激活 (暂停/初始界面)，仍然绘制静态信息
-                    ctx.fillStyle = 'white';
-                    ctx.font = '24px Arial';
-                    // 确保 playerInstance 已经被创建
-                    if (playerInstance) playerInstance.draw(); 
-                    ctx.fillText(`得分: ${score}`, 10, 60);
-                }
-                
-                // 9. 持续调用自身，维持动画帧
-                animationFrameId = requestAnimationFrame(gameLoop);
-            }
-
-            // --- 初始化：在加载完图片后启动循环并显示开始界面 ---
-            
-            loadAssets().then(() => {
-                // 启动前初始化玩家实例
-                playerInstance = new Player();
-                
-                // 启动游戏循环 (它会持续运行，但逻辑被 isGameActive 暂停)
-                gameLoop(0); 
-                
-                // 显示初始模态框
-                showModal('欢迎来到打飞机游戏', '请输入您的昵称开始游戏:');
-            });
         });
     </script>
 </body>
