@@ -172,12 +172,16 @@
             let enemySpawnInterval = 1000; // 敌人生成间隔 (ms)
             const playerSize = { width: 50, height: 50 }; // 玩家贴图大小
             const enemySize = { width: 50, height: 50 }; // 敌人贴图大小
+            
+            // 非跟踪敌人平移参数
+            const NORMAL_ENEMY_MOVE_SPEED = 1.5; // 水平移动速度
+            const NORMAL_ENEMY_MAX_OFFSET = 50; // 最大水平偏移距离
 
             // === 3. 加载贴图 ===
             const playerImg = new Image();
             playerImg.src = 'assets/player.png';
 
-            const enemy1Img = new Image(); // 不会射击
+            const enemy1Img = new Image(); // 不会射击 (平移型)
             enemy1Img.src = 'assets/player1.png';
 
             const enemy2Img = new Image(); // 会射击 (跟踪型)
@@ -356,7 +360,8 @@
                     lastEnemySpawn = Date.now();
                     
                     let isHomingType = Math.random() < 0.3; // 30% 几率是跟踪型
-                    enemies.push({
+                    
+                    let newEnemy = {
                         x: Math.random() * (canvas.width - enemySize.width),
                         y: -enemySize.height,
                         width: enemySize.width,
@@ -364,9 +369,19 @@
                         speed: 2 + (score / 1000), // 速度随分数增加
                         isHoming: isHomingType,
                         img: isHomingType ? enemy2Img : enemy1Img,
-                        lastMissileShot: 0,
-                        missileRate: 2000 // 跟踪导弹射速
-                    });
+                    };
+                    
+                    if (isHomingType) {
+                        newEnemy.lastMissileShot = 0;
+                        newEnemy.missileRate = 2000;
+                    } else {
+                        // **新增** 非跟踪型敌人的水平移动属性
+                        newEnemy.initialX = newEnemy.x; // 记录初始X位置
+                        // 随机决定初始移动方向 (-1:左, 1:右)
+                        newEnemy.moveDirection = Math.random() < 0.5 ? -1 : 1; 
+                    }
+
+                    enemies.push(newEnemy);
 
                     // 增加难度
                     if (enemySpawnInterval > 300) {
@@ -377,6 +392,28 @@
                 // 4. 更新敌人
                 for (let i = enemies.length - 1; i >= 0; i--) {
                     let enemy = enemies[i];
+                    
+                    // === 核心修改：非跟踪敌人的水平移动 ===
+                    if (!enemy.isHoming) {
+                        // 1. 水平移动
+                        enemy.x += enemy.moveDirection * NORMAL_ENEMY_MOVE_SPEED;
+
+                        // 2. 检查边界并反转方向
+                        let currentOffset = enemy.x - enemy.initialX;
+                        
+                        if (currentOffset > NORMAL_ENEMY_MAX_OFFSET) {
+                            enemy.moveDirection = -1; // 达到右侧最大偏移，向左移
+                        } else if (currentOffset < -NORMAL_ENEMY_MAX_OFFSET) {
+                            enemy.moveDirection = 1; // 达到左侧最大偏移，向右移
+                        }
+                        
+                        // 确保敌人不会飞出屏幕左右边界（可选，小幅度平移一般不会）
+                        if (enemy.x < 0) enemy.moveDirection = 1;
+                        if (enemy.x + enemy.width > canvas.width) enemy.moveDirection = -1;
+                    }
+                    // ======================================
+
+                    // 垂直下落
                     enemy.y += enemy.speed;
 
                     // 飞出屏幕
@@ -389,12 +426,11 @@
                     if (enemy.isHoming && (Date.now() - enemy.lastMissileShot > enemy.missileRate)) {
                         enemy.lastMissileShot = Date.now();
                         missiles.push({
-                            // *** (修改 1) ***
-                            x: enemy.x + enemy.width / 2 - 10, // 导弹更宽，中心点偏移
+                            x: enemy.x + enemy.width / 2 - 10, 
                             y: enemy.y + enemy.height,
-                            width: 20,  // 变大：10 -> 20
-                            height: 30, // 变大：20 -> 30
-                            speed: 2.5 + (score / 3000) // 变慢：(4 + score/2000) -> (2.5 + score/3000)
+                            width: 20,  
+                            height: 30, 
+                            speed: 2.5 + (score / 3000) 
                         });
                     }
 
@@ -428,7 +464,6 @@
                     }
                 }
 
-                // *** (修改 2) ***
                 // 6. 碰撞检测：子弹 vs (敌人 or 导弹)
                 for (let i = bullets.length - 1; i >= 0; i--) {
                     // 检查子弹是否存在 (可能在上一次迭代中被移除了)
@@ -515,7 +550,7 @@
                 return rect1.x < rect2.x + rect2.width &&
                        rect1.x + rect1.width > rect2.x &&
                        rect1.y < rect2.y + rect2.height &&
-                       rect1.y + rect1.height > rect2.y;
+                       rect1.y + rect2.height > rect2.y;
             }
 
             // 窗口大小改变时重置画布（在游戏中不推荐，但开始时需要）
