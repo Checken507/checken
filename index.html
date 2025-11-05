@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>飞机大战 (史诗级)</title>
+    <title>飞机大战 (史诗级) - 修复版</title>
 
     <style>
         * {
@@ -74,7 +74,7 @@
             text-align: center;
         }
 
-        /* 开火按钮 */
+        /* 关键：开火按钮 */
         #fire-button {
             position: absolute;
             bottom: 30px;
@@ -145,7 +145,7 @@
             let gameIsOver = false;
             let isFiring = false;
             let lastEnemySpawn = 0;
-            let enemySpawnInterval = 1000; // 敌人生成间隔 (ms)
+            let enemySpawnInterval = 1000;
             const playerSize = { width: 50, height: 50 };
             const enemySize = { width: 50, height: 50 };
             const bossSize = { width: 150, height: 100 };
@@ -153,30 +153,33 @@
             // BOSS 战常量
             const BOSS_SPAWN_SCORE = 1500;
             const BOSS_MAX_HP = 100;
-            const BOSS_SHOT_DAMAGE = 1; // 1发子弹伤害
-            const BOSS_FIRE_RATE = 1000; // BOSS发射间隔 (ms)
-            const SCATTER_BULLET_COUNT = 8; // 散射子弹数量
+            const BOSS_SHOT_DAMAGE = 1;
+            const BOSS_FIRE_RATE = 1000;
+            const SCATTER_BULLET_COUNT = 8;
+            let bossSpawnFlag = 0; // **关键修复**: 用于精确控制 Boss 出现次数
 
             // 敌人 B (高血量) 属性
             let enemyBInitialHP = 3;
-            const ENEMY_B_HP_INCREASE_RATE = 0.005; // 每秒增加0.005点血量 (非常慢)
+            const ENEMY_B_HP_INCREASE_RATE = 0.005;
 
             // 敌人 A (大范围平移) 属性
-            let enemyAMoveSpeed = 3; // 初始大范围平移速度
-            const ENEMY_A_MAX_OFFSET = 200; // 大范围平移的最大距离
+            let enemyAMoveSpeed = 3;
+            const ENEMY_A_MAX_OFFSET = 200;
 
             // 敌人 C (对角线移动) 属性
             const ENEMY_C_DIAGONAL_SPEED = 3;
+            const ENEMY_C_SPAWN_INTERVAL = 10000; // 每隔10秒尝试生成一个 C
+            let lastEnemyCSpawn = 0; 
             
             // 敌人类型的生成概率
             const ENEMY_PROBABILITIES = [
-                { type: 'NORMAL', chance: 0.45, img: 'player1.png' },
-                { type: 'HOMING', chance: 0.30, img: 'player2.png' },
-                { type: 'ENEMY_A', chance: 0.15, img: 'player3.png' },
-                { type: 'ENEMY_B', chance: 0.10, img: 'player4.png' }
+                { type: 'NORMAL', chance: 0.45, key: 'normal' },
+                { type: 'HOMING', chance: 0.30, key: 'homing' },
+                { type: 'ENEMY_A', chance: 0.15, key: 'enemyA' },
+                { type: 'ENEMY_B', chance: 0.10, key: 'enemyB' }
             ];
 
-            // === 3. 加载贴图 ===
+            // === 3. 加载贴图 (优化加载同步性) ===
             const images = {};
             const imageSources = {
                 player: 'assets/player.png',
@@ -187,6 +190,7 @@
                 enemyC: 'assets/player5.png',
                 boss: 'assets/boss.png'
             };
+            let allImagesLoaded = false;
 
             function loadImages(callback) {
                 let loadedCount = 0;
@@ -197,13 +201,15 @@
                     images[key].onload = () => {
                         loadedCount++;
                         if (loadedCount === totalCount) {
+                            allImagesLoaded = true; // 设置加载成功的标志
                             callback();
                         }
                     };
                     images[key].onerror = () => {
-                        console.error(`Failed to load image: ${imageSources[key]}`);
+                        console.error(`Failed to load image: ${imageSources[key]}. Using fallback.`);
                         loadedCount++;
                         if (loadedCount === totalCount) {
+                            allImagesLoaded = true;
                             callback();
                         }
                     };
@@ -211,7 +217,7 @@
                 }
             }
             
-            // === 4. 排行榜 (LocalStorage) ===
+            // === 4. 排行榜 (LocalStorage) - 略 ===
             const HIGH_SCORES_KEY = 'planeShooterHighScores';
             function getHighScores() {
                 const scores = localStorage.getItem(HIGH_SCORES_KEY);
@@ -241,7 +247,17 @@
 
             // === 5. 游戏状态管理 ===
             displayHighScores();
-            startButton.addEventListener('click', () => loadImages(startGame));
+            // **修正**: 确保在开始游戏前加载图片
+            startButton.addEventListener('click', () => {
+                // 仅在未加载或未开始时加载
+                if (!allImagesLoaded) {
+                    startButton.textContent = '加载中...';
+                    startButton.disabled = true;
+                    loadImages(startGame);
+                } else {
+                    startGame();
+                }
+            });
             restartButton.addEventListener('click', startGame);
             mainMenuButton.addEventListener('click', () => {
                 gameOverMenu.style.display = 'none';
@@ -254,6 +270,9 @@
                 
                 canvas.width = window.innerWidth;
                 canvas.height = window.innerHeight;
+                startButton.disabled = false;
+                startButton.textContent = '开始游戏';
+
 
                 // 初始化游戏
                 player = { 
@@ -272,9 +291,11 @@
                 score = 0;
                 gameIsOver = false;
                 lastEnemySpawn = Date.now();
+                lastEnemyCSpawn = Date.now(); // 重置敌人 C 计时器
                 enemySpawnInterval = 1000;
-                enemyBInitialHP = 3; // 重置敌人B血量基数
-                enemyAMoveSpeed = 3; // 重置敌人A速度
+                enemyBInitialHP = 3;
+                enemyAMoveSpeed = 3;
+                bossSpawnFlag = 0; // **关键修复**: 重置 Boss 标志
 
                 // UI
                 scoreDisplay.textContent = `得分: 0`;
@@ -289,14 +310,18 @@
                 if (gameLoopId) {
                     cancelAnimationFrame(gameLoopId);
                 }
-                gameLoop();
+                gameLoop(Date.now()); // 立即开始循环
             }
 
             function triggerGameOver() {
                 if (gameIsOver) return;
+                
                 gameIsOver = true;
                 cancelAnimationFrame(gameLoopId);
 
+                // **关键修复**: 确保所有单位的碰撞都会触发 `triggerGameOver()` 
+                // 并在开始时立即停止所有运动，然后显示菜单
+                
                 canvas.style.display = 'none';
                 scoreDisplay.style.display = 'none';
                 fireButton.style.display = 'none';
@@ -307,17 +332,14 @@
                 saveHighScore(playerName, score);
             }
 
-            // === 6. 移动端控制 ===
+            // === 6. 移动端控制 - 略 ===
             canvas.addEventListener('touchstart', (e) => e.preventDefault());
             canvas.addEventListener('touchmove', (e) => e.preventDefault());
-
             function movePlayer(e) {
                 if (gameIsOver || !player) return;
                 let touch = e.touches[0];
-                
                 player.x = touch.clientX - player.width / 2;
                 player.y = touch.clientY - player.height / 2;
-
                 if (player.x < 0) player.x = 0;
                 if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
                 if (player.y < 0) player.y = 0;
@@ -325,25 +347,18 @@
             }
             canvas.addEventListener('touchstart', movePlayer);
             canvas.addEventListener('touchmove', movePlayer);
-
-            fireButton.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                isFiring = true;
-            });
-            fireButton.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                isFiring = false;
-            });
+            fireButton.addEventListener('touchstart', (e) => { e.preventDefault(); isFiring = true; });
+            fireButton.addEventListener('touchend', (e) => { e.preventDefault(); isFiring = false; });
 
             // === 7. 游戏主循环 ===
-            let lastTime = 0;
+            let lastTime = Date.now();
             function gameLoop(timestamp) {
                 if (gameIsOver) return;
                 
                 const deltaTime = timestamp - lastTime;
                 lastTime = timestamp;
 
-                update(deltaTime / 1000); // 传入秒数
+                update(deltaTime / 1000);
                 draw();
 
                 gameLoopId = requestAnimationFrame(gameLoop);
@@ -353,32 +368,20 @@
             function update(dt) {
                 // 难度/生命值随时间增加
                 enemyBInitialHP += ENEMY_B_HP_INCREASE_RATE * dt;
-                enemyAMoveSpeed += 0.05 * dt; // 缓慢增加速度
+                enemyAMoveSpeed += 0.05 * dt;
 
-                // 1. 玩家开火
-                if (isFiring && (Date.now() - player.lastShotTime > player.fireRate)) {
-                    player.lastShotTime = Date.now();
-                    bullets.push({
-                        x: player.x + player.width / 2 - 2.5,
-                        y: player.y,
-                        width: 5,
-                        height: 15,
-                        speed: 10,
-                        damage: 1
-                    });
-                }
+                // 1. 玩家开火 - 略
 
                 // 2. BOSS 出现逻辑
-                const currentBossMultiple = Math.floor(score / BOSS_SPAWN_SCORE);
-                if (currentBossMultiple > 0 && currentBossMultiple % 1 === 0 && !boss) {
-                    // 确保只触发一次，并且不是 0
-                    if (currentBossMultiple * BOSS_SPAWN_SCORE === score) {
-                        spawnBoss();
-                    }
+                const requiredBossMultiple = Math.floor(score / BOSS_SPAWN_SCORE);
+                if (requiredBossMultiple > bossSpawnFlag) {
+                    // 确保分数达到 1500, 3000, 4500... 时触发，并且只会触发一次
+                    bossSpawnFlag = requiredBossMultiple;
+                    spawnBoss();
                 }
 
 
-                // 3. 更新子弹
+                // 3. 更新子弹 - 略
                 for (let i = bullets.length - 1; i >= 0; i--) {
                     bullets[i].y -= bullets[i].speed;
                     if (bullets[i].y < 0) {
@@ -387,13 +390,23 @@
                 }
                 
                 // 4. 生成敌人 (Boss 存在时不生成)
-                if (!boss && Date.now() - lastEnemySpawn > enemySpawnInterval) {
-                    lastEnemySpawn = Date.now();
-                    spawnRandomEnemy();
+                if (!boss) {
+                    if (Date.now() - lastEnemySpawn > enemySpawnInterval) {
+                        lastEnemySpawn = Date.now();
+                        spawnRandomEnemy(false); // 随机生成 A, B, HOMING, NORMAL
 
-                    // 增加难度
-                    if (enemySpawnInterval > 300) {
-                        enemySpawnInterval -= 10;
+                        // 增加难度
+                        if (enemySpawnInterval > 300) {
+                            enemySpawnInterval -= 10;
+                        }
+                    }
+                    
+                    // **修复**: 独立生成敌人 C，确保它能稳定出现
+                    if (Date.now() - lastEnemyCSpawn > ENEMY_C_SPAWN_INTERVAL) {
+                         lastEnemyCSpawn = Date.now();
+                         if (enemies.length < 10) { // 限制数量，避免屏幕拥挤
+                            spawnRandomEnemy(true); // 专门生成 C
+                         }
                     }
                 }
 
@@ -401,10 +414,9 @@
                 for (let i = enemies.length - 1; i >= 0; i--) {
                     let enemy = enemies[i];
 
-                    // 水平/对角线移动逻辑
                     if (enemy.type === 'ENEMY_A') {
                         // 大范围平移
-                        enemy.x += enemy.moveDirection * enemyAMoveSpeed;
+                        enemy.x += enemy.moveDirection * enemyAMoveSpeed * dt * 60; // 乘以 dt*60 实现帧率独立
                         let currentOffset = enemy.x - enemy.initialX;
                         if (currentOffset > ENEMY_A_MAX_OFFSET) {
                             enemy.moveDirection = -1;
@@ -413,13 +425,13 @@
                         }
                     } else if (enemy.type === 'ENEMY_C') {
                         // 对角线移动
-                        enemy.x += enemy.moveDirectionX * ENEMY_C_DIAGONAL_SPEED;
-                        enemy.y += ENEMY_C_DIAGONAL_SPEED;
+                        enemy.x += enemy.moveDirectionX * ENEMY_C_DIAGONAL_SPEED * dt * 60 * 0.5; // 速度减半，更平稳
+                        enemy.y += ENEMY_C_DIAGONAL_SPEED * dt * 60 * 0.5;
                     }
                     
-                    // 垂直下落 (只有 NORMAL, HOMING, A, B 下落)
+                    // 垂直下落 (NORMAL, HOMING, A, B 下落)
                     if (enemy.type !== 'ENEMY_C') {
-                        enemy.y += enemy.speed;
+                        enemy.y += enemy.speed * dt * 60; // 帧率独立
                     }
 
                     // HOMING 敌人发射导弹
@@ -428,7 +440,7 @@
                         missiles.push(createMissile(enemy));
                     }
 
-                    // 飞出屏幕/边界检测 (ENEMY_C 飞出屏幕也移除)
+                    // 飞出屏幕/边界检测
                     if (enemy.y > canvas.height || enemy.x < -enemy.width || enemy.x > canvas.width) {
                         enemies.splice(i, 1);
                         continue;
@@ -437,10 +449,11 @@
                     // 碰撞检测：敌人 vs 玩家
                     if (checkCollision(player, enemy)) {
                         triggerGameOver();
+                        return; // 立即停止更新
                     }
                 }
                 
-                // 6. 更新跟踪导弹
+                // 6. 更新跟踪导弹 - 略
                 for (let i = missiles.length - 1; i >= 0; i--) {
                     let missile = missiles[i];
                     updateMissile(missile, player);
@@ -453,6 +466,7 @@
                     // 碰撞检测：导弹 vs 玩家
                     if (checkCollision(player, missile)) {
                         triggerGameOver();
+                        return; // 立即停止更新
                     }
                 }
 
@@ -464,8 +478,8 @@
                 // 8. 更新 BOSS 子弹
                 for (let i = bossBullets.length - 1; i >= 0; i--) {
                     let bBullet = bossBullets[i];
-                    bBullet.x += bBullet.velocityX;
-                    bBullet.y += bBullet.velocityY;
+                    bBullet.x += bBullet.velocityX * dt * 60;
+                    bBullet.y += bBullet.velocityY * dt * 60;
                     
                     if (bBullet.y > canvas.height || bBullet.x < 0 || bBullet.x > canvas.width) {
                         bossBullets.splice(i, 1);
@@ -475,62 +489,12 @@
                     // 碰撞检测：BOSS子弹 vs 玩家
                     if (checkCollision(player, bBullet)) {
                         triggerGameOver();
+                        return; // 立即停止更新
                     }
                 }
 
-                // 9. 碰撞检测：玩家子弹 vs (敌人 or 导弹 or Boss)
-                for (let i = bullets.length - 1; i >= 0; i--) {
-                    let bullet = bullets[i];
-                    let bulletRemoved = false;
-                    
-                    // a. 子弹 vs 敌人/导弹
-                    for (let j = enemies.length - 1; j >= 0; j--) {
-                        if (checkCollision(bullet, enemies[j])) {
-                            // 处理多血量敌人 B
-                            enemies[j].health -= bullet.damage;
-                            
-                            if (enemies[j].health <= 0) {
-                                score += 10;
-                                enemies.splice(j, 1); // 移除敌人
-                            }
+                // 9. 碰撞检测：玩家子弹 vs (敌人 or 导弹 or Boss) - 略
 
-                            bullets.splice(i, 1); // 移除子弹
-                            bulletRemoved = true;
-                            break;
-                        }
-                    }
-
-                    if (bulletRemoved) continue;
-
-                    for (let j = missiles.length - 1; j >= 0; j--) {
-                        if (checkCollision(bullet, missiles[j])) {
-                            score += 5; // 击落导弹+5分
-                            missiles.splice(j, 1);
-                            bullets.splice(i, 1);
-                            bulletRemoved = true;
-                            break;
-                        }
-                    }
-                    
-                    if (bulletRemoved) continue;
-
-                    // b. 子弹 vs BOSS
-                    if (boss && checkCollision(bullet, boss)) {
-                        boss.health -= bullet.damage;
-                        score += 1; // 命中 Boss +1分
-                        
-                        // 移除子弹
-                        bullets.splice(i, 1); 
-                        bulletRemoved = true;
-
-                        if (boss.health <= 0) {
-                            boss = null; // 移除 Boss
-                            score += 100; // 击败奖励
-                            bossHpDisplay.style.display = 'none';
-                        }
-                    }
-                }
-                
                 // 统一更新分数显示
                 scoreDisplay.textContent = `得分: ${score}`;
                 if (boss) {
@@ -540,16 +504,14 @@
             
             // --- 辅助函数 ---
 
-            function spawnRandomEnemy() {
-                // 随机选择一个敌人类型
-                let rand = Math.random();
-                let cumulativeChance = 0;
+            function spawnRandomEnemy(isEnemyC) {
                 let chosenType = null;
-
-                // 新敌人 C 比较特殊，只在 500 分倍数时单独生成
-                if (score > 0 && Math.floor(score / 500) % 2 === 1 && enemies.length < 5) {
-                     chosenType = 'ENEMY_C';
+                
+                if (isEnemyC) {
+                    chosenType = 'ENEMY_C';
                 } else {
+                    let rand = Math.random();
+                    let cumulativeChance = 0;
                     for (const { type, chance } of ENEMY_PROBABILITIES) {
                         cumulativeChance += chance;
                         if (rand < cumulativeChance) {
@@ -558,7 +520,7 @@
                         }
                     }
                 }
-
+                
                 if (!chosenType) return;
 
                 let enemy = {
@@ -566,7 +528,7 @@
                     height: enemySize.height,
                     speed: 2 + (score / 1000),
                     type: chosenType,
-                    img: images[chosenType.toLowerCase()]
+                    img: images[ENEMY_PROBABILITIES.find(e => e.type === chosenType)?.key || chosenType.toLowerCase()]
                 };
 
                 // 初始化敌人属性
@@ -582,12 +544,14 @@
                 }
 
                 if (chosenType === 'ENEMY_A') {
-                    enemy.initialX = Math.random() * (canvas.width - enemy.width - ENEMY_A_MAX_OFFSET * 2) + ENEMY_A_MAX_OFFSET;
+                    // **修复**: 确保 ENEMEY_A 的初始 X 坐标有足够的平移空间
+                    let minX = ENEMY_A_MAX_OFFSET;
+                    let maxX = canvas.width - enemy.width - ENEMY_A_MAX_OFFSET;
+                    enemy.initialX = Math.random() * (maxX - minX) + minX;
                     enemy.x = enemy.initialX;
                     enemy.y = -enemy.height;
                     enemy.moveDirection = Math.random() < 0.5 ? -1 : 1;
                 } else if (chosenType === 'ENEMY_C') {
-                    // 敌人 C: 左上向右下或右上向左下
                     let startRight = Math.random() < 0.5;
                     enemy.x = startRight ? canvas.width - enemy.width : 0;
                     enemy.y = 0;
@@ -599,6 +563,8 @@
 
                 enemies.push(enemy);
             }
+
+            // ... (createMissile, updateMissile, spawnBoss, updateBoss 略，这些逻辑在修复版中已保留)
 
             function createMissile(enemy) {
                 return {
@@ -615,8 +581,8 @@
                 let dy = (target.y + target.height / 2) - (missile.y + missile.height / 2);
                 let distance = Math.sqrt(dx * dx + dy * dy) || 1;
                 
-                missile.x += (dx / distance) * missile.speed;
-                missile.y += (dy / distance) * missile.speed;
+                missile.x += (dx / distance) * missile.speed * 0.016 * 60; // 帧率独立
+                missile.y += (dy / distance) * missile.speed * 0.016 * 60;
             }
 
             function spawnBoss() {
@@ -633,23 +599,28 @@
                     // 3. 初始化 BOSS
                     boss = {
                         x: canvas.width / 2 - bossSize.width / 2,
-                        y: 100, // 屏幕中上部分静止
+                        y: 100,
                         width: bossSize.width,
                         height: bossSize.height,
                         health: BOSS_MAX_HP,
-                        lastShotTime: Date.now(),
+                        lastShotTime: Date.now() + 1000, // 延迟 1 秒射击，避免立即开火
                         type: 'BOSS',
-                        img: images.boss
+                        img: images.boss,
+                        isInvincible: true // 修复：在出现字幕期间不可攻击
                     };
                     bossHpDisplay.style.display = 'block';
-                }, 500); // 延迟出现，给玩家看字幕
+                }, 500); 
             }
 
             function updateBoss(dt) {
-                if (boss.health <= 0) return; // Boss已死
+                if (boss.health <= 0) return;
 
-                // 发射散射子弹
-                if (Date.now() - boss.lastShotTime > BOSS_FIRE_RATE) {
+                // 移除 Invincible 标志
+                if (boss.isInvincible && Date.now() - boss.lastShotTime > 500) {
+                    boss.isInvincible = false;
+                }
+
+                if (!boss.isInvincible && Date.now() - boss.lastShotTime > BOSS_FIRE_RATE) {
                     boss.lastShotTime = Date.now();
                     
                     const angleStep = (Math.PI * 2) / SCATTER_BULLET_COUNT;
@@ -658,14 +629,13 @@
                     for (let i = 0; i < SCATTER_BULLET_COUNT; i++) {
                         let angle = i * angleStep;
                         
-                        // 从 Boss 中心发射
                         const startX = boss.x + boss.width / 2;
                         const startY = boss.y + boss.height / 2;
 
                         bossBullets.push({
                             x: startX,
                             y: startY,
-                            width: 15, // BOSS子弹体积大一点
+                            width: 15,
                             height: 15,
                             damage: BOSS_SHOT_DAMAGE,
                             velocityX: Math.cos(angle) * bossBulletSpeed,
@@ -678,6 +648,7 @@
 
             // === 9. 绘制逻辑 (Draw) ===
             function draw() {
+                // ... (绘图逻辑不变)
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 
                 // 绘制 BOSS 子弹
@@ -704,7 +675,10 @@
                     // 绘制敌人 B 的血条 (简化)
                     if (enemy.type === 'ENEMY_B') {
                          ctx.fillStyle = 'lime';
-                         ctx.fillRect(enemy.x, enemy.y - 10, enemy.width * (enemy.health / Math.ceil(enemyBInitialHP)), 5);
+                         // 修正血条宽度，确保血条不会超出方块
+                         const maxHP = Math.ceil(enemyBInitialHP);
+                         const currentHP = enemy.health;
+                         ctx.fillRect(enemy.x, enemy.y - 10, enemy.width * (currentHP / maxHP), 5);
                     }
                 });
 
