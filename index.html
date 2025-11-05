@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>手机打飞机游戏</title>
+    <title>打飞机游戏 - 排行榜版</title>
     <style>
-        /* 重置基础样式 */
+        /* CSS 样式 */
         body {
             margin: 0;
             display: flex;
@@ -13,267 +13,218 @@
             align-items: center;
             height: 100vh;
             background-color: #000;
-            overflow: hidden; /* 防止滑动屏幕时页面滚动 */
-            touch-action: none; /* 关键：防止浏览器默认的触摸行为 */
+            overflow: hidden;
+            touch-action: none;
+            font-family: Arial, sans-serif;
         }
         
-        /* 关键：让 Canvas 适应手机屏幕宽度 */
         canvas {
             width: 100%;
-            max-width: 480px; /* 设定最大宽度，防止在平板或电脑上过宽 */
+            max-width: 480px; 
             border: 2px solid #333;
             background-color: #000; 
-            height: 100%; /* 高度自适应 */
+            height: 100%;
         }
         
-        #shootButton {
+        /* 射击按钮样式 */
+        #shootButton, #resetButton {
             position: absolute;
             bottom: 20px;
-            right: 20px;
             width: 80px;
             height: 80px;
             border-radius: 50%;
-            background-color: rgba(255, 0, 0, 0.7);
             color: white;
-            font-size: 20px;
+            font-size: 16px;
             line-height: 80px;
             text-align: center;
             border: 3px solid white;
             z-index: 10;
-            user-select: none; /* 防止被选中 */
-            touch-action: manipulation; /* 提高按钮响应速度 */
+            user-select: none;
+            cursor: pointer;
         }
+
+        #shootButton {
+            right: 20px;
+            background-color: rgba(255, 0, 0, 0.7);
+        }
+        #resetButton {
+            left: 20px;
+            background-color: rgba(0, 150, 255, 0.7);
+            display: none; /* 初始隐藏 */
+        }
+
+        /* 模态框和排行榜样式 */
+        .modal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 20;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        .modal-content {
+            background: #222;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+            max-width: 90%;
+        }
+
+        #nicknameInput {
+            padding: 10px;
+            margin: 10px 0 20px 0;
+            border-radius: 5px;
+            border: none;
+            width: 90%;
+            text-align: center;
+            font-size: 18px;
+        }
+        
+        .start-button {
+            padding: 10px 20px;
+            font-size: 20px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            margin-top: 10px;
+        }
+        
+        #rankingList {
+            list-style: none;
+            padding: 0;
+            text-align: left;
+            width: 100%;
+            margin-top: 15px;
+            font-size: 16px;
+        }
+        
+        #rankingList li {
+            padding: 5px 0;
+            border-bottom: 1px dashed #555;
+            display: flex;
+            justify-content: space-between;
+        }
+
     </style>
 </head>
 <body>
     <canvas id="gameCanvas" width="480" height="640"></canvas>
     
     <div id="shootButton">开火</div>
+    <div id="resetButton">重置</div>
+
+    <div id="startModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitle">打飞机游戏</h2>
+            <p id="modalMessage">请输入您的昵称开始游戏:</p>
+            <input type="text" id="nicknameInput" placeholder="请输入昵称" value="玩家">
+            <button id="startButton" class="start-button">开始游戏</button>
+            
+            <h3>🚀 排行榜 (前 10)</h3>
+            <ul id="rankingList">
+                </ul>
+        </div>
+    </div>
 
     <script>
-        // 获取Canvas元素、绘图上下文和按钮
+        // --- 核心变量 ---
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const shootButton = document.getElementById('shootButton');
+        const resetButton = document.getElementById('resetButton');
+        const startModal = document.getElementById('startModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const nicknameInput = document.getElementById('nicknameInput');
+        const rankingList = document.getElementById('rankingList');
+        const startButton = document.getElementById('startButton');
 
-        // --- 游戏设置 ---
         const GAME_WIDTH = canvas.width;
         const GAME_HEIGHT = canvas.height;
-        let isGameOver = false;
+        
+        let isGameStarted = false; // 游戏是否已经开始运行
+        let isGameOver = false;    // 游戏是否结束
         let score = 0;
+        let playerName = '玩家';
         let lastEnemyTime = 0;
-        const ENEMY_SPAWN_INTERVAL = 1000; // 敌人生成间隔 (毫秒)
+        const ENEMY_SPAWN_INTERVAL = 1000; 
 
-        // 玩家飞船对象
-        const player = {
-            x: GAME_WIDTH / 2 - 25, 
-            y: GAME_HEIGHT - 80,   // 稍高一些，留出按钮位置
-            width: 50,
-            height: 50,
-            bullets: [],
-            // 记录上次触摸点的偏移量，用于拖拽
-            touchOffsetX: 0,
-            
-            draw() {
-                ctx.fillStyle = 'blue';
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-            },
-            
-            // 射击函数
-            fire() {
-                this.bullets.push(createBullet(this.x + this.width / 2 - 2.5, this.y));
-            }
+        // --- 1. 图片导入路径 ---
+        const ASSET_PATHS = {
+            player: 'assets/player.png',
+            enemy: 'assets/enemy.png',
+            bullet: 'assets/bullet.png'
         };
+        const IMAGES = {};
+        let assetsLoaded = 0;
+        const totalAssets = Object.keys(ASSET_PATHS).length;
 
-        // --- 游戏对象构造函数 ---
-        
-        function createEnemy(x, y) {
-            return {
-                x: x,
-                y: y,
-                width: 40,
-                height: 40,
-                speed: 1 + Math.random() * 2, // 随机速度
-                isAlive: true,
-                draw() {
-                    ctx.fillStyle = 'red';
-                    ctx.fillRect(this.x, this.y, this.width, this.height);
-                },
-                update() {
-                    this.y += this.speed; 
-                    if (this.y > GAME_HEIGHT) {
-                        this.isAlive = false;
-                    }
-                }
-            };
-        }
-        
-        function createBullet(x, y) {
-            return {
-                x: x,
-                y: y,
-                width: 5,
-                height: 10,
-                speed: -7, 
-                isAlive: true,
-                draw() {
-                    ctx.fillStyle = 'yellow';
-                    ctx.fillRect(this.x, this.y, this.width, this.height);
-                },
-                update() {
-                    this.y += this.speed;
-                    if (this.y < 0) {
-                        this.isAlive = false;
-                    }
-                }
-            };
-        }
-        
-        let enemies = [];
-
-        // --- 触摸事件处理 (关键的移动设备控制) ---
-        
-        // 用于将手机屏幕坐标转换为 Canvas 坐标
-        function getTouchPos(touch) {
-            const rect = canvas.getBoundingClientRect();
-            // 考虑到 Canvas 的缩放和定位，计算 Canvas 上的实际坐标
-            const scaleX = GAME_WIDTH / rect.width;
-            const scaleY = GAME_HEIGHT / rect.height;
-            return {
-                x: (touch.clientX - rect.left) * scaleX,
-                y: (touch.clientY - rect.top) * scaleY
-            };
-        }
-
-        // 触摸开始：计算偏移量 (只响应飞船区域的触摸)
-        canvas.addEventListener('touchstart', (e) => {
-            if (isGameOver) return;
-            const pos = getTouchPos(e.touches[0]);
-            
-            // 检查触摸点是否在飞船范围内 (稍微扩大触摸区域)
-            if (pos.x > player.x - 10 && pos.x < player.x + player.width + 10 &&
-                pos.y > player.y - 10 && pos.y < player.y + player.height + 10) {
-                
-                // 记录手指按下点与飞船中心的偏移
-                player.touchOffsetX = pos.x - player.x;
-            } else {
-                // 如果没有点到飞船，则不移动
-                player.touchOffsetX = null;
-            }
-        });
-
-        // 触摸移动：根据手指位置更新飞船位置
-        canvas.addEventListener('touchmove', (e) => {
-            if (isGameOver || player.touchOffsetX === null) return;
-            e.preventDefault(); // 阻止默认的滑动行为
-            
-            const pos = getTouchPos(e.touches[0]);
-            
-            // 计算新的飞船X位置 (手指位置 - 偏移量)
-            let newX = pos.x - player.touchOffsetX;
-            
-            // 边界检查
-            newX = Math.max(0, Math.min(GAME_WIDTH - player.width, newX));
-            player.x = newX;
-        });
-        
-        // 触摸结束：重置偏移量
-        canvas.addEventListener('touchend', (e) => {
-            player.touchOffsetX = null;
-        });
-
-        // 射击按钮事件
-        shootButton.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // 阻止触摸按钮时触发Canvas的touch事件
-            if (!isGameOver) player.fire();
-        });
-        shootButton.addEventListener('mousedown', (e) => {
-             // 兼容电脑端的鼠标点击
-             if (!isGameOver) player.fire();
-        });
-
-        // --- 游戏循环函数 ---
-        function gameLoop(currentTime) {
-            if (isGameOver) {
-                // 游戏结束显示
-                ctx.fillStyle = 'white';
-                ctx.font = '40px Arial';
-                ctx.fillText('游戏结束!', GAME_WIDTH / 2 - 80, GAME_HEIGHT / 2);
-                ctx.font = '20px Arial';
-                ctx.fillText(`得分: ${score}`, GAME_WIDTH / 2 - 40, GAME_HEIGHT / 2 + 50);
-                return;
+        // 加载所有图片资源
+        function loadAssets() {
+            if (totalAssets === 0) {
+                 // 如果没有图片，直接跳过加载过程
+                return new Promise(resolve => resolve());
             }
 
-            // 1. 清空画布
-            ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-            
-            // 2. 敌人生成
-            if (currentTime - lastEnemyTime > ENEMY_SPAWN_INTERVAL) {
-                 // 在顶部随机位置生成敌人
-                const randomX = Math.random() * (GAME_WIDTH - 40); 
-                enemies.push(createEnemy(randomX, -40));
-                lastEnemyTime = currentTime;
-            }
-
-            // 3. 更新、绘制子弹和碰撞检测 (子弹 -> 敌人)
-            player.bullets.forEach(bullet => {
-                if (bullet.isAlive) {
-                    bullet.update();
-                    bullet.draw();
-                    
-                    enemies.forEach(enemy => {
-                        if (enemy.isAlive && 
-                            bullet.x < enemy.x + enemy.width &&
-                            bullet.x + bullet.width > enemy.x &&
-                            bullet.y < enemy.y + enemy.height &&
-                            bullet.y + bullet.height > enemy.y) 
-                        {
-                            // 发生碰撞！
-                            enemy.isAlive = false;
-                            bullet.isAlive = false;
-                            score += 10; // 加分
+            return new Promise(resolve => {
+                for (let key in ASSET_PATHS) {
+                    const img = new Image();
+                    img.onload = () => {
+                        IMAGES[key] = img;
+                        assetsLoaded++;
+                        if (assetsLoaded === totalAssets) {
+                            resolve(); // 所有图片加载完成
                         }
-                    });
+                    };
+                    img.onerror = () => {
+                        console.warn(`图片加载失败: ${ASSET_PATHS[key]}。将使用方块代替。`);
+                        // 即使加载失败，也标记为完成，防止游戏卡住
+                        assetsLoaded++; 
+                        if (assetsLoaded === totalAssets) {
+                            resolve(); 
+                        }
+                    };
+                    // 注意：这里的路径是相对于 HTML 文件的。请确保创建 assets 文件夹并将图片放入其中
+                    img.src = ASSET_PATHS[key];
                 }
             });
-
-            // 4. 更新、绘制敌人和碰撞检测 (敌人 -> 玩家)
-            enemies.forEach(enemy => {
-                if (enemy.isAlive) {
-                    enemy.update();
-                    enemy.draw();
-                    
-                    // 敌人与玩家碰撞
-                    if (player.x < enemy.x + enemy.width &&
-                        player.x + player.width > enemy.x &&
-                        player.y < enemy.y + enemy.height &&
-                        player.y + player.height > enemy.y) 
-                    {
-                        isGameOver = true;
-                    }
-                }
-            });
-
-            // 5. 过滤掉死亡的对象
-            player.bullets = player.bullets.filter(b => b.isAlive);
-            enemies = enemies.filter(e => e.isAlive);
-
-            // 6. 绘制玩家
-            player.draw();
-            
-            // 7. 绘制分数
-            ctx.fillStyle = 'white';
-            ctx.font = '24px Arial';
-            ctx.fillText(`得分: ${score}`, 10, 30);
-            
-            // 8. 持续调用自身
-            requestAnimationFrame(gameLoop);
         }
+        
+        // --- 游戏对象构造函数 (使用图片或方块) ---
+        
+        class GameObject {
+            constructor(x, y, width, height, imageKey) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.isAlive = true;
+                this.image = IMAGES[imageKey];
+                this.color = (imageKey === 'player') ? 'blue' : (imageKey === 'enemy' ? 'red' : 'yellow');
+            }
 
-        // 启动游戏循环
-        requestAnimationFrame(gameLoop);
-
-    </script>
-</body>
-
-</html>
+            draw() {
+                if (this.image && this.image.complete) {
+                    ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+                } else {
+                    // 如果图片未加载或不存在，使用方块代替
+                    ctx.fillStyle = this.color;
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                }
+            }
+        }
+        
+        class Player extends GameObject {
+            constructor() {
+                super(GAME_WIDTH / 2 - 25, GAME_HEIGHT - 80,
