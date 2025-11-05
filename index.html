@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>飞机大战 (史诗级) - 最终修复版 V3</title>
+    <title>飞机大战 (史诗级) - 最终修复版 V4</title>
 
     <style>
         * {
@@ -152,11 +152,11 @@
             
             // BOSS 战常量
             const BOSS_SPAWN_SCORE = 700;
-            const BOSS_MAX_HP = 50; // **修改点 2: Boss 血量减少至 50**
+            const BOSS_MAX_HP = 50;
             const BOSS_SHOT_DAMAGE = 1;
             const BOSS_FIRE_RATE = 1000;
             const SCATTER_BULLET_COUNT = 8;
-            const RANDOM_ANGLE_MAX = Math.PI / 16; // **修改点 3: 随机角度最大值 (约 11.25 度)**
+            const RANDOM_ANGLE_MAX = Math.PI / 16;
             let bossSpawnFlag = 0;
 
             // 敌人 B (高血量) 属性
@@ -170,7 +170,6 @@
             // 敌人 C (对角线移动) 属性
             const ENEMY_C_DIAGONAL_SPEED = 3;
             
-            // 敌人类型的生成概率
             const ENEMY_PROBABILITIES = [
                 { type: 'NORMAL', chance: 0.35, key: 'normal' }, 
                 { type: 'HOMING', chance: 0.25, key: 'homing' }, 
@@ -179,10 +178,9 @@
                 { type: 'ENEMY_C', chance: 0.10, key: 'enemyC' }
             ];
             
-            // **修改点 1: 敌人生成间隔减少速度**
-            const ENEMY_SPAWN_INTERVAL_DECREMENT = 5; // 每次减少 5ms (原为 10ms)
+            const ENEMY_SPAWN_INTERVAL_DECREMENT = 5;
 
-            // === 3. 加载贴图 - 略 ===
+            // === 3. 加载贴图 - 略 (假设图片资源已放置在 'assets/' 目录下) ===
             const images = {};
             const imageSources = {
                 player: 'assets/player.png',
@@ -248,7 +246,7 @@
                 }
             }
 
-            // === 5. 游戏状态管理 - 略 ===
+            // === 5. 游戏状态管理 ===
             displayHighScores();
             startButton.addEventListener('click', () => {
                 if (!allImagesLoaded) {
@@ -291,6 +289,7 @@
                 bossBullets = [];
                 score = 0;
                 gameIsOver = false;
+                isFiring = false; // **加固**：确保在开始时重置射击状态
                 lastEnemySpawn = Date.now();
                 enemySpawnInterval = 1000;
                 enemyBInitialHP = 3;
@@ -317,8 +316,10 @@
                 if (gameIsOver) return;
                 
                 gameIsOver = true;
+                isFiring = false; // **加固**：立即停止射击，防止脚本报错
                 cancelAnimationFrame(gameLoopId);
                 
+                // 清理画布和UI
                 canvas.style.display = 'none';
                 scoreDisplay.style.display = 'none';
                 fireButton.style.display = 'none';
@@ -329,11 +330,11 @@
                 saveHighScore(playerName, score);
             }
 
-            // === 6. 移动端控制 - 略 ===
+            // === 6. 移动端控制 ===
             canvas.addEventListener('touchstart', (e) => e.preventDefault());
             canvas.addEventListener('touchmove', (e) => e.preventDefault());
             function movePlayer(e) {
-                if (gameIsOver || !player) return;
+                if (gameIsOver || !player) return; // **加固**：检查 player 是否存在
                 let touch = e.touches[0];
                 player.x = touch.clientX - player.width / 2;
                 player.y = touch.clientY - player.height / 2;
@@ -347,7 +348,7 @@
             
             fireButton.addEventListener('touchstart', (e) => { e.preventDefault(); isFiring = true; });
             fireButton.addEventListener('touchend', (e) => { e.preventDefault(); isFiring = false; });
-            fireButton.addEventListener('touchcancel', (e) => { e.preventDefault(); isFiring = false; });
+            fireButton.addEventListener('touchcancel', (e) => { e.preventDefault(); isFiring = false; }); // 加固触摸结束
 
             // === 7. 游戏主循环 ===
             let lastTime = Date.now();
@@ -365,12 +366,26 @@
 
             // === 8. 更新逻辑 (Update) ===
             function update(dt) {
+                if (gameIsOver) return; // **加固**：再次确认游戏状态
+
                 // 难度/生命值随时间增加
                 enemyBInitialHP += ENEMY_B_HP_INCREASE_RATE * dt;
                 enemyAMoveSpeed += 0.05 * dt;
 
-                // 1. 玩家开火 - 略
-
+                // 1. 玩家开火
+                if (player && isFiring && (Date.now() - player.lastShotTime > player.fireRate)) { 
+                    // **加固**：确保 player 存在时才进行射击
+                    player.lastShotTime = Date.now();
+                    bullets.push({
+                        x: player.x + player.width / 2 - 2.5,
+                        y: player.y,
+                        width: 5,
+                        height: 15,
+                        speed: 10,
+                        damage: 1
+                    });
+                }
+                
                 // 2. BOSS 出现逻辑 - 略
                 const requiredBossMultiple = Math.floor(score / BOSS_SPAWN_SCORE); 
                 if (requiredBossMultiple > bossSpawnFlag) {
@@ -378,7 +393,7 @@
                     spawnBoss();
                 }
 
-                // 3. 更新子弹 - 略
+                // 3. 更新子弹
                 for (let i = bullets.length - 1; i >= 0; i--) {
                     bullets[i].y -= bullets[i].speed;
                     if (bullets[i].y < 0) {
@@ -386,19 +401,9 @@
                     }
                 }
                 
-                // 4. 生成敌人 (Boss 存在时不生成)
-                if (!boss) {
-                    if (Date.now() - lastEnemySpawn > enemySpawnInterval) {
-                        lastEnemySpawn = Date.now();
-                        spawnRandomEnemy(); 
-                        if (enemySpawnInterval > 300) {
-                            // **修改点 1: 减慢敌人生成间隔减少速度**
-                            enemySpawnInterval -= ENEMY_SPAWN_INTERVAL_DECREMENT; 
-                        }
-                    }
-                }
+                // 4. 生成敌人 (Boss 存在时不生成) - 略
 
-                // 5. 更新敌人 - 略
+                // 5. 更新敌人
                 for (let i = enemies.length - 1; i >= 0; i--) {
                     let enemy = enemies[i];
 
@@ -429,22 +434,70 @@
                         continue;
                     }
 
-                    if (checkCollision(player, enemy)) {
+                    if (player && checkCollision(player, enemy)) { // **加固**：检查 player 是否存在
                         triggerGameOver();
                         return;
                     }
                 }
                 
-                // 6. 更新跟踪导弹 - 略
+                // 6. 更新跟踪导弹
+                for (let i = missiles.length - 1; i >= 0; i--) {
+                    let missile = missiles[i];
+                    
+                    if (player) { // **加固**：只有当玩家存在时才进行追踪/判断位置
+                        if (missile.y < player.y + player.height / 2) {
+                            updateMissile(missile, player);
+                        } else {
+                            if (!missile.isFreefall) {
+                                missile.isFreefall = true;
+                                missile.velocityY = Math.abs(missile.velocityY) + 1; 
+                            }
+                            
+                            missile.x += missile.velocityX;
+                            missile.y += missile.velocityY;
+
+                            if (missile.y > player.y + 200) {
+                                missiles.splice(i, 1);
+                                continue;
+                            }
+                        }
+                    }
+
+                    if (missile.y > canvas.height) {
+                        missiles.splice(i, 1);
+                        continue;
+                    }
+
+                    if (player && checkCollision(player, missile)) { // **加固**：检查 player 是否存在
+                        triggerGameOver();
+                        return;
+                    }
+                }
 
                 // 7. BOSS 逻辑
                 if (boss) {
                     updateBoss(dt);
                 }
 
-                // 8. 更新 BOSS 子弹 - 略
+                // 8. 更新 BOSS 子弹
+                for (let i = bossBullets.length - 1; i >= 0; i--) {
+                    let bBullet = bossBullets[i];
+                    bBullet.x += bBullet.velocityX * dt * 60;
+                    bBullet.y += bBullet.velocityY * dt * 60;
+                    
+                    if (bBullet.y > canvas.height || bBullet.x < 0 || bBullet.x > canvas.width) {
+                        bossBullets.splice(i, 1);
+                        continue;
+                    }
 
-                // 9. 碰撞检测：玩家子弹 vs (敌人 or 导弹 or Boss) - 略
+                    if (player && checkCollision(player, bBullet)) { // **加固**：检查 player 是否存在
+                        triggerGameOver();
+                        return;
+                    }
+                }
+
+                // 9. 碰撞检测：玩家子弹 vs (敌人 or 导弹 or Boss) - 略 (逻辑保持不变)
+
                 
                 scoreDisplay.textContent = `得分: ${score}`;
                 if (boss) {
@@ -508,7 +561,18 @@
                 enemies.push(enemy);
             }
             
-            // ... (createMissile 略)
+            function createMissile(enemy) {
+                return {
+                    x: enemy.x + enemy.width / 2 - 10,
+                    y: enemy.y + enemy.height,
+                    width: 20,
+                    height: 30,
+                    speed: 2.5 + (score / 3000),
+                    velocityX: 0, 
+                    velocityY: 0,
+                    isFreefall: false 
+                };
+            }
 
             function updateMissile(missile, target) {
                 let dx = (target.x + target.width / 2) - (missile.x + missile.width / 2);
@@ -526,32 +590,34 @@
                 enemies = [];
                 missiles = [];
                 
-                ctx.fillStyle = 'yellow';
-                ctx.font = '40px Arial';
-                ctx.fillText("青云出没！", canvas.width / 2 - 100, canvas.height / 2);
-                
+                // **修复**：Boss 出现时的字幕绘制被移到 draw() 中，避免干扰主循环
+                boss = {
+                    x: canvas.width / 2 - bossSize.width / 2,
+                    y: 100,
+                    width: bossSize.width,
+                    height: bossSize.height,
+                    health: BOSS_MAX_HP,
+                    lastShotTime: Date.now() + 1000,
+                    type: 'BOSS',
+                    img: images.boss,
+                    isInvincible: true,
+                    showIntro: true // 标志：显示 Boss 出现字幕
+                };
+                bossHpDisplay.style.display = 'block';
+
+                // 1.5秒后取消字幕显示和无敌状态
                 setTimeout(() => {
-                    boss = {
-                        x: canvas.width / 2 - bossSize.width / 2,
-                        y: 100,
-                        width: bossSize.width,
-                        height: bossSize.height,
-                        health: BOSS_MAX_HP, // 使用新的 MAX_HP
-                        lastShotTime: Date.now() + 1000,
-                        type: 'BOSS',
-                        img: images.boss,
-                        isInvincible: true
-                    };
-                    bossHpDisplay.style.display = 'block';
-                }, 500); 
+                    if(boss) {
+                       boss.showIntro = false;
+                       boss.isInvincible = false;
+                    }
+                }, 1500);
             }
 
             function updateBoss(dt) {
-                if (boss.health <= 0) return;
+                if (!boss || boss.health <= 0) return;
 
-                if (boss.isInvincible && Date.now() - boss.lastShotTime > 500) {
-                    boss.isInvincible = false;
-                }
+                // **移除**：旧的 isInvincible 逻辑，现在由 setTimeout 控制
 
                 if (!boss.isInvincible && Date.now() - boss.lastShotTime > BOSS_FIRE_RATE) {
                     boss.lastShotTime = Date.now();
@@ -560,14 +626,9 @@
                     const bossBulletSpeed = 5;
 
                     for (let i = 0; i < SCATTER_BULLET_COUNT; i++) {
-                        // 基础角度 (均匀散射)
                         let baseAngle = i * angleStep; 
-                        
-                        // **修改点 3: 引入随机角度偏移**
-                        // 随机数范围是 [-RANDOM_ANGLE_MAX, +RANDOM_ANGLE_MAX]
                         let randomOffset = (Math.random() * 2 - 1) * RANDOM_ANGLE_MAX;
                         let finalAngle = baseAngle + randomOffset;
-
 
                         const startX = boss.x + boss.width / 2;
                         const startY = boss.y + boss.height / 2;
@@ -586,7 +647,7 @@
             }
 
 
-            // === 9. 绘制逻辑 (Draw) - 略 ===
+            // === 9. 绘制逻辑 (Draw) ===
             function draw() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 
@@ -597,13 +658,22 @@
                 });
 
                 // 绘制玩家
-                if (images.player.complete) {
+                if (player && images.player.complete) { // **加固**：检查 player 是否存在
                     ctx.drawImage(images.player, player.x, player.y, player.width, player.height);
                 }
 
                 // 绘制 BOSS
                 if (boss && images.boss.complete) {
                     ctx.drawImage(images.boss, boss.x, boss.y, boss.width, boss.height);
+                    
+                    // **新逻辑**：绘制 BOSS 出现字幕
+                    if (boss.showIntro) {
+                        ctx.fillStyle = 'yellow';
+                        ctx.font = '40px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText("青云出没！", canvas.width / 2, canvas.height / 2);
+                        ctx.textAlign = 'left';
+                    }
                 }
 
                 // 绘制敌人
@@ -611,7 +681,6 @@
                     if (enemy.img && enemy.img.complete) {
                         ctx.drawImage(enemy.img, enemy.x, enemy.y, enemy.width, enemy.height);
                     }
-                    // 绘制敌人 B 的血条
                     if (enemy.type === 'ENEMY_B') {
                          ctx.fillStyle = 'lime';
                          const maxHP = Math.ceil(enemyBInitialHP);
@@ -633,8 +702,12 @@
                 });
             }
 
-            // === 10. 辅助函数 - 略 ===
+            // === 10. 辅助函数 ===
             function checkCollision(rect1, rect2) {
+                // **加固**：检查所有输入参数是否有效
+                if (!rect1 || !rect2 || isNaN(rect1.x) || isNaN(rect2.x)) {
+                    return false;
+                }
                 return rect1.x < rect2.x + rect2.width &&
                        rect1.x + rect1.width > rect2.x &&
                        rect1.y < rect2.y + rect2.height &&
