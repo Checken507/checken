@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>飞机大战 (史诗级) - 最终修复版</title>
+    <title>飞机大战</title>
 
     <style>
         * {
@@ -148,13 +148,13 @@
             let enemySpawnInterval = 1000;
             const playerSize = { width: 50, height: 50 };
             const enemySize = { width: 50, height: 50 };
-            const bossSize = { width: 150, height: 100 };
+            const bossSize = { width: 200, height: 150 };
             
             // BOSS 战常量
             const BOSS_SPAWN_SCORE = 1500;
             const BOSS_MAX_HP = 100;
             const BOSS_SHOT_DAMAGE = 1;
-            const BOSS_FIRE_RATE = 1000;
+            const BOSS_FIRE_RATE = 350;
             const SCATTER_BULLET_COUNT = 8;
             let bossSpawnFlag = 0;
 
@@ -173,10 +173,11 @@
             
             // 敌人类型的生成概率
             const ENEMY_PROBABILITIES = [
-                { type: 'NORMAL', chance: 0.45, key: 'normal' },
-                { type: 'HOMING', chance: 0.30, key: 'homing' },
+                { type: 'NORMAL', chance: 0.50, key: 'normal' },
+                { type: 'HOMING', chance: 0.20, key: 'homing' },
                 { type: 'ENEMY_A', chance: 0.15, key: 'enemyA' },
-                { type: 'ENEMY_B', chance: 0.10, key: 'enemyB' }
+                { type: 'ENEMY_B', chance: 0.15, key: 'enemyB' }
+                { type: 'ENEMY_C', chance: 0.10, key: 'enemyB' }
             ];
 
             // === 3. 加载贴图 ===
@@ -778,3 +779,4 @@
     </script>
 </body>
 </html>
+
