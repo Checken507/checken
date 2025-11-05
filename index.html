@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>打飞机游戏 - 排行榜版</title>
+    <title>打飞机游戏 - 排行榜版 (最终修复)</title>
     <style>
         /* CSS 样式 */
         body {
@@ -46,6 +46,7 @@
         #shootButton {
             right: 20px;
             background-color: rgba(255, 0, 0, 0.7);
+            display: none; /* 初始隐藏 */
         }
         #resetButton {
             left: 20px;
@@ -60,7 +61,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.85);
+            background-color: rgba(0, 0, 0, 0.9);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -77,6 +78,9 @@
             border-radius: 10px;
             box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
             max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+            text-align: center;
         }
 
         #nicknameInput {
@@ -122,7 +126,6 @@
     <canvas id="gameCanvas" width="480" height="640"></canvas>
     
     <div id="shootButton">开火</div>
-    <div id="resetButton">重置</div>
 
     <div id="startModal" class="modal">
         <div class="modal-content">
@@ -142,7 +145,6 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const shootButton = document.getElementById('shootButton');
-        const resetButton = document.getElementById('resetButton');
         const startModal = document.getElementById('startModal');
         const modalTitle = document.getElementById('modalTitle');
         const modalMessage = document.getElementById('modalMessage');
@@ -153,14 +155,14 @@
         const GAME_WIDTH = canvas.width;
         const GAME_HEIGHT = canvas.height;
         
-        let isGameStarted = false; // 游戏是否已经开始运行
-        let isGameOver = false;    // 游戏是否结束
+        let isGameActive = false;  // 控制游戏逻辑是否运行（暂停/开始）
+        let isGameOver = false;
         let score = 0;
         let playerName = '玩家';
         let lastEnemyTime = 0;
         const ENEMY_SPAWN_INTERVAL = 1000; 
 
-        // --- 1. 图片导入路径 ---
+        // --- 1. 图片导入路径 (已修复加载逻辑) ---
         const ASSET_PATHS = {
             player: 'assets/player.png',
             enemy: 'assets/enemy.png',
@@ -170,38 +172,37 @@
         let assetsLoaded = 0;
         const totalAssets = Object.keys(ASSET_PATHS).length;
 
-        // 加载所有图片资源
         function loadAssets() {
-            if (totalAssets === 0) {
-                 // 如果没有图片，直接跳过加载过程
-                return new Promise(resolve => resolve());
-            }
-
             return new Promise(resolve => {
+                let assetsToLoad = totalAssets;
+                if (assetsToLoad === 0) {
+                    resolve();
+                    return;
+                }
+
                 for (let key in ASSET_PATHS) {
                     const img = new Image();
                     img.onload = () => {
                         IMAGES[key] = img;
                         assetsLoaded++;
-                        if (assetsLoaded === totalAssets) {
-                            resolve(); // 所有图片加载完成
+                        if (assetsLoaded === assetsToLoad) {
+                            resolve();
                         }
                     };
                     img.onerror = () => {
                         console.warn(`图片加载失败: ${ASSET_PATHS[key]}。将使用方块代替。`);
-                        // 即使加载失败，也标记为完成，防止游戏卡住
+                        // 关键：即使加载失败，也需要计数，防止 resolve 无法触发
                         assetsLoaded++; 
-                        if (assetsLoaded === totalAssets) {
-                            resolve(); 
+                        if (assetsLoaded === assetsToLoad) {
+                            resolve();
                         }
                     };
-                    // 注意：这里的路径是相对于 HTML 文件的。请确保创建 assets 文件夹并将图片放入其中
                     img.src = ASSET_PATHS[key];
                 }
             });
         }
         
-        // --- 游戏对象构造函数 (使用图片或方块) ---
+        // --- 游戏对象构造函数 ---
         
         class GameObject {
             constructor(x, y, width, height, imageKey) {
@@ -215,7 +216,8 @@
             }
 
             draw() {
-                if (this.image && this.image.complete) {
+                // 检查图片是否已加载成功
+                if (this.image && this.image.complete && this.image.naturalWidth > 0) {
                     ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
                 } else {
                     // 如果图片未加载或不存在，使用方块代替
@@ -229,9 +231,8 @@
             constructor() {
                 super(GAME_WIDTH / 2 - 25, GAME_HEIGHT - 80, 50, 50, 'player');
                 this.bullets = [];
-                this.touchOffsetX = 0; // 用于移动
+                this.touchOffsetX = 0; 
             }
-            
             fire() {
                  this.bullets.push(new Bullet(this.x + this.width / 2 - 2.5, this.y));
             }
@@ -263,39 +264,33 @@
             }
         }
 
-        let playerInstance = new Player();
+        let playerInstance;
         let enemies = [];
 
-        // --- 2. 重置功能 ---
+        // --- 2. 重置功能 (修复逻辑) ---
 
         function resetGame() {
             score = 0;
             isGameOver = false;
+            // 重新实例化玩家和敌人数组
             playerInstance = new Player();
             enemies = [];
             lastEnemyTime = 0;
-            
-            // 隐藏重置按钮，显示射击按钮
-            resetButton.style.display = 'none';
-            shootButton.style.display = 'block';
         }
 
-        // --- 3. 昵称输入与排行榜功能 ---
+        // --- 排行榜功能 ---
         
         const RANKING_KEY = 'shooterLeaderboard';
         
-        // 从 localStorage 加载排行榜
         function loadRanking() {
             const rankingData = localStorage.getItem(RANKING_KEY);
             return rankingData ? JSON.parse(rankingData) : [];
         }
 
-        // 保存新的得分到排行榜
         function saveScore(name, score) {
             const ranking = loadRanking();
-            ranking.push({ name, score, date: new Date().toLocaleString() });
+            ranking.push({ name, score, date: new Date().toLocaleDateString() });
             
-            // 排序并只保留前10名
             ranking.sort((a, b) => b.score - a.score);
             const topTen = ranking.slice(0, 10);
             
@@ -303,7 +298,6 @@
             return topTen;
         }
 
-        // 渲染排行榜到模态框
         function renderRanking(ranking) {
             rankingList.innerHTML = '';
             if (ranking.length === 0) {
@@ -321,50 +315,28 @@
             });
         }
         
-        // 显示开始/结束模态框
-        function showModal(title, message) {
+        function showModal(title, message, isFinalScore = false) {
             modalTitle.textContent = title;
             modalMessage.innerHTML = message;
             
-            // 如果是游戏结束，显示玩家得分信息
-            if (title === '游戏结束') {
+            isGameActive = false; // 暂停游戏逻辑
+            
+            if (isFinalScore) {
                 const ranking = saveScore(playerName, score);
                 renderRanking(ranking);
-                startButton.textContent = '重新开始';
+                startButton.textContent = '再玩一次';
                 nicknameInput.style.display = 'none';
             } else {
-                 // 初始状态
                 renderRanking(loadRanking());
                 startButton.textContent = '开始游戏';
                 nicknameInput.style.display = 'block';
             }
             
             startModal.style.display = 'flex';
-            resetButton.style.display = 'none';
             shootButton.style.display = 'none';
         }
         
-        // 隐藏模态框并开始游戏
-        startButton.onclick = () => {
-            if (isGameStarted) {
-                // 如果是重新开始
-                resetGame();
-            }
-            
-            // 获取并保存玩家昵称
-            playerName = nicknameInput.value.trim() || '玩家';
-            
-            startModal.style.display = 'none';
-            shootButton.style.display = 'block';
-            isGameStarted = true;
-            
-            // 如果游戏还没有运行，则启动
-            if (!animationFrameId) {
-                gameLoop(0); 
-            }
-        };
-
-        // --- 触摸事件处理 (移动和射击) ---
+        // --- 触摸事件处理 ---
         
         function getTouchPos(touch) {
             const rect = canvas.getBoundingClientRect();
@@ -377,7 +349,7 @@
         }
 
         canvas.addEventListener('touchstart', (e) => {
-            if (!isGameStarted || isGameOver) return;
+            if (!isGameActive) return;
             const pos = getTouchPos(e.touches[0]);
             
             if (pos.x > playerInstance.x - 10 && pos.x < playerInstance.x + playerInstance.width + 10 &&
@@ -390,7 +362,7 @@
         });
 
         canvas.addEventListener('touchmove', (e) => {
-            if (!isGameStarted || isGameOver || playerInstance.touchOffsetX === null) return;
+            if (!isGameActive || playerInstance.touchOffsetX === null) return;
             e.preventDefault(); 
             
             const pos = getTouchPos(e.touches[0]);
@@ -407,109 +379,20 @@
         // 射击按钮事件
         shootButton.addEventListener('touchstart', (e) => {
             e.preventDefault(); 
-            if (isGameStarted && !isGameOver) playerInstance.fire();
+            if (isGameActive) playerInstance.fire();
         });
         shootButton.addEventListener('mousedown', (e) => {
-             if (isGameStarted && !isGameOver) playerInstance.fire();
+             if (isGameActive) playerInstance.fire();
         });
         
-        // 重置按钮事件
-        resetButton.addEventListener('click', () => {
-            showModal('游戏结束', `<p>昵称: <b>${playerName}</b></p>您的最终得分是: <b>${score}</b> 分`);
-        });
-
-        // --- 游戏循环函数 ---
-        let animationFrameId = null;
-
-        function gameLoop(currentTime) {
-            if (!isGameStarted) {
-                 animationFrameId = requestAnimationFrame(gameLoop);
-                 return;
-            }
+        // 关键修复点：开始/重新开始
+        startButton.onclick = () => {
+            // 1. 重置游戏状态
+            resetGame();
             
-            if (isGameOver) {
-                // 确保只显示一次结束画面
-                if (startModal.style.display !== 'flex') {
-                    showModal('游戏结束', `<p>昵称: <b>${playerName}</b></p>您的最终得分是: <b>${score}</b> 分`);
-                }
-                // 停止循环
-                return;
-            }
-
-            // 1. 清空画布
-            ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+            // 2. 获取昵称
+            playerName = nicknameInput.value.trim() || '玩家';
             
-            // 2. 敌人生成
-            if (currentTime - lastEnemyTime > ENEMY_SPAWN_INTERVAL) {
-                const randomX = Math.random() * (GAME_WIDTH - 40); 
-                enemies.push(new Enemy(randomX, -40));
-                lastEnemyTime = currentTime;
-            }
-
-            // 3. 更新、绘制子弹和碰撞检测 (子弹 -> 敌人)
-            playerInstance.bullets.forEach(bullet => {
-                if (bullet.isAlive) {
-                    bullet.update();
-                    bullet.draw();
-                    
-                    enemies.forEach(enemy => {
-                        if (enemy.isAlive && 
-                            bullet.x < enemy.x + enemy.width &&
-                            bullet.x + bullet.width > enemy.x &&
-                            bullet.y < enemy.y + enemy.height &&
-                            bullet.y + bullet.height > enemy.y) 
-                        {
-                            // 发生碰撞！
-                            enemy.isAlive = false;
-                            bullet.isAlive = false;
-                            score += 10; 
-                        }
-                    });
-                }
-            });
-
-            // 4. 更新、绘制敌人和碰撞检测 (敌人 -> 玩家)
-            enemies.forEach(enemy => {
-                if (enemy.isAlive) {
-                    enemy.update();
-                    enemy.draw();
-                    
-                    if (playerInstance.x < enemy.x + enemy.width &&
-                        playerInstance.x + playerInstance.width > enemy.x &&
-                        playerInstance.y < enemy.y + enemy.height &&
-                        playerInstance.y + playerInstance.height > enemy.y) 
-                    {
-                        isGameOver = true;
-                        // 显示重置按钮，隐藏射击按钮
-                        resetButton.style.display = 'block';
-                        shootButton.style.display = 'none';
-                    }
-                }
-            });
-
-            // 5. 过滤掉死亡的对象
-            playerInstance.bullets = playerInstance.bullets.filter(b => b.isAlive);
-            enemies = enemies.filter(e => e.isAlive);
-
-            // 6. 绘制玩家
-            playerInstance.draw();
-            
-            // 7. 绘制分数和昵称
-            ctx.fillStyle = 'white';
-            ctx.font = '24px Arial';
-            ctx.fillText(`昵称: ${playerName}`, 10, 30);
-            ctx.fillText(`得分: ${score}`, 10, 60);
-            
-            // 8. 持续调用自身
-            animationFrameId = requestAnimationFrame(gameLoop);
-        }
-
-        // --- 初始化：在加载完图片后显示开始界面 ---
-        
-        loadAssets().then(() => {
-            showModal('欢迎来到打飞机游戏', '请输入您的昵称开始游戏:');
-        });
-
-    </script>
-</body>
-</html>
+            // 3. 隐藏模态框，显示按钮
+            startModal.style.display = 'none';
+            shootButton.style.display
